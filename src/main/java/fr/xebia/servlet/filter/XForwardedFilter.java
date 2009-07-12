@@ -1,5 +1,5 @@
 /*
- * Copyright 2002-2008 the original author or authors.
+ * Copyright 2009 Xebia and the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -496,22 +496,22 @@ public class XForwardedFilter implements Filter {
      */
     private static final Pattern commaSeparatedValuesPattern = Pattern.compile("\\s*,\\s*");
     
-    protected static final String INTERNAL_PROXIES_PARAMETER = "InternalProxies";
+    protected static final String INTERNAL_PROXIES_PARAMETER = "internalProxies";
     
     /**
      * Logger
      */
     private static final Logger logger = LoggerFactory.getLogger(XForwardedFilter.class);
     
-    protected static final String PROTOCOL_HEADER_PARAMETER = "ProtocolHeader";
+    protected static final String PROTOCOL_HEADER_PARAMETER = "protocolHeader";
     
-    protected static final String PROTOCOL_HEADER_SSL_VALUE_PARAMETER = "ProtocolHeaderSslValue";
+    protected static final String PROTOCOL_HEADER_SSL_VALUE_PARAMETER = "protocolHeaderSslValue";
     
-    protected static final String PROXIES_HEADER_PARAMETER = "ProxiesHeader";
+    protected static final String PROXIES_HEADER_PARAMETER = "proxiesHeader";
     
-    protected static final String REMOTE_IP_HEADER_PARAMETER = "RemoteIPHeader";
+    protected static final String REMOTE_IP_HEADER_PARAMETER = "remoteIPHeader";
     
-    protected static final String TRUSTED_PROXIES_PARAMETER = "TrustedProxies";
+    protected static final String TRUSTED_PROXIES_PARAMETER = "trustedProxies";
     
     protected static final String HTTPS_SERVER_PORT_PARAMETER = "httpsServerPort";
     
