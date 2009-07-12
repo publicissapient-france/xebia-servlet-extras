@@ -83,7 +83,7 @@ import org.slf4j.LoggerFactory;
  * <strong>Configuration parameters:</strong>
  * <table border="1">
  * <tr>
- * <th>RemoteIpValve property</th>
+ * <th>XForwardedFilter property</th>
  * <th>Description</th>
  * <th>Equivalent mod_remoteip directive</th>
  * <th>Format</th>
@@ -152,23 +152,38 @@ import org.slf4j.LoggerFactory;
  * <strong>Sample with internal proxies</strong>
  * </p>
  * <p>
- * RemoteIpValve configuration:
+ * XForwardedFilter configuration:
  * </p>
  * <code><pre>
- * &lt;Valve 
- *   className="org.apache.catalina.connector.RemoteIpValve"
- *   allowedInternalProxies="192\.168\.0\.10, 192\.168\.0\.11"
- *   remoteIPHeader="x-forwarded-for"
- *   remoteIPProxiesHeader="x-forwarded-by"
- *   protocolHeader="x-forwarded-proto"
- *   /&gt;</pre></code>
+ * &lt;filter&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPProxiesHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-by&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;protocolHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-proto&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ * &lt;/filter&gt;
+ * 
+ * &lt;filter-mapping&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;url-pattern&gt;/*&lt;/url-pattern&gt;
+ *    &lt;dispatcher&gt;REQUEST&lt;/dispatcher&gt;
+ * &lt;/filter-mapping&gt;</pre></code>
  * <p>
  * Request values:
  * <table border="1">
  * <tr>
  * <th>property</th>
- * <th>Value Before RemoteIpValve</th>
- * <th>Value After RemoteIpValve</th>
+ * <th>Value Before XForwardedFilter</th>
+ * <th>Value After XForwardedFilter</th>
  * </tr>
  * <tr>
  * <td>request.remoteAddr</td>
@@ -214,23 +229,38 @@ import org.slf4j.LoggerFactory;
  * <strong>Sample with trusted proxies</strong>
  * </p>
  * <p>
- * RemoteIpValve configuration:
+ * XForwardedFilter configuration:
  * </p>
  * <code><pre>
- * &lt;Valve 
- *   className="org.apache.catalina.connector.RemoteIpValve"
- *   allowedInternalProxies="192\.168\.0\.10, 192\.168\.0\.11"
- *   remoteIPHeader="x-forwarded-for"
- *   remoteIPProxiesHeader="x-forwarded-by"
- *   trustedProxies="proxy1, proxy2"
- *   /&gt;</pre></code>
+ * &lt;filter&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPProxiesHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-by&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;trustedProxies&lt;/param-name&gt;&lt;param-value&gt;proxy1, proxy2&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ * &lt;/filter&gt;
+ * 
+ * &lt;filter-mapping&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;url-pattern&gt;/*&lt;/url-pattern&gt;
+ *    &lt;dispatcher&gt;REQUEST&lt;/dispatcher&gt;
+ * &lt;/filter-mapping&gt;</pre></code>
  * <p>
  * Request values:
  * <table border="1">
  * <tr>
  * <th>property</th>
- * <th>Value Before RemoteIpValve</th>
- * <th>Value After RemoteIpValve</th>
+ * <th>Value Before XForwardedFilter</th>
+ * <th>Value After XForwardedFilter</th>
  * </tr>
  * <tr>
  * <td>request.remoteAddr</td>
@@ -256,23 +286,38 @@ import org.slf4j.LoggerFactory;
  * <strong>Sample with internal and trusted proxies</strong>
  * </p>
  * <p>
- * RemoteIpValve configuration:
+ * XForwardedFilter configuration:
  * </p>
  * <code><pre>
- * &lt;Valve 
- *   className="org.apache.catalina.connector.RemoteIpValve"
- *   allowedInternalProxies="192\.168\.0\.10, 192\.168\.0\.11"
- *   remoteIPHeader="x-forwarded-for"
- *   remoteIPProxiesHeader="x-forwarded-by"
- *   trustedProxies="proxy1, proxy2"
- *   /&gt;</pre></code>
+ * &lt;filter&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPProxiesHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-by&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;trustedProxies&lt;/param-name&gt;&lt;param-value&gt;proxy1, proxy2&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ * &lt;/filter&gt;
+ * 
+ * &lt;filter-mapping&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;url-pattern&gt;/*&lt;/url-pattern&gt;
+ *    &lt;dispatcher&gt;REQUEST&lt;/dispatcher&gt;
+ * &lt;/filter-mapping&gt;</pre></code>
  * <p>
  * Request values:
  * <table border="1">
  * <tr>
  * <th>property</th>
- * <th>Value Before RemoteIpValve</th>
- * <th>Value After RemoteIpValve</th>
+ * <th>Value Before XForwardedFilter</th>
+ * <th>Value After XForwardedFilter</th>
  * </tr>
  * <tr>
  * <td>request.remoteAddr</td>
@@ -299,23 +344,38 @@ import org.slf4j.LoggerFactory;
  * <strong>Sample with an untrusted proxy</strong>
  * </p>
  * <p>
- * RemoteIpValve configuration:
+ * XForwardedFilter configuration:
  * </p>
  * <code><pre>
- * &lt;Valve 
- *   className="org.apache.catalina.connector.RemoteIpValve"
- *   allowedInternalProxies="192\.168\.0\.10, 192\.168\.0\.11"
- *   remoteIPHeader="x-forwarded-for"
- *   remoteIPProxiesHeader="x-forwarded-by"
- *   trustedProxies="proxy1, proxy2"
- *   /&gt;</pre></code>
+ * &lt;filter&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;remoteIPProxiesHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-by&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;trustedProxies&lt;/param-name&gt;&lt;param-value&gt;proxy1, proxy2&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ * &lt;/filter&gt;
+ * 
+ * &lt;filter-mapping&gt;
+ *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
+ *    &lt;url-pattern&gt;/*&lt;/url-pattern&gt;
+ *    &lt;dispatcher&gt;REQUEST&lt;/dispatcher&gt;
+ * &lt;/filter-mapping&gt;</pre></code>
  * <p>
  * Request values:
  * <table border="1">
  * <tr>
  * <th>property</th>
- * <th>Value Before RemoteIpValve</th>
- * <th>Value After RemoteIpValve</th>
+ * <th>Value Before XForwardedFilter</th>
+ * <th>Value After XForwardedFilter</th>
  * </tr>
  * <tr>
  * <td>request.remoteAddr</td>
@@ -496,7 +556,7 @@ public class XForwardedFilter implements Filter {
      */
     private static final Pattern commaSeparatedValuesPattern = Pattern.compile("\\s*,\\s*");
     
-    protected static final String INTERNAL_PROXIES_PARAMETER = "internalProxies";
+    protected static final String INTERNAL_PROXIES_PARAMETER = "allowedInternalProxies";
     
     /**
      * Logger
