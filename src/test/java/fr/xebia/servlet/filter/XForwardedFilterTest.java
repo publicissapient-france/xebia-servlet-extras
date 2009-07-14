@@ -20,10 +20,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 
 import javax.servlet.ServletException;
@@ -56,9 +59,23 @@ public class XForwardedFilterTest {
             return request;
         }
         
+        @SuppressWarnings("unchecked")
         @Override
         public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
             this.request = (HttpServletRequest)request;
+            PrintWriter writer = response.getWriter();
+            
+            writer.println("request.remoteAddr=" + request.getRemoteAddr());
+            writer.println("request.remoteHost=" + request.getRemoteHost());
+            writer.println("request.secure=" + request.isSecure());
+            writer.println("request.scheme=" + request.getScheme());
+            writer.println("request.serverPort=" + request.getServerPort());
+            
+            writer.println();
+            for (Enumeration<?> headers = request.getHeaderNames(); headers.hasMoreElements();) {
+                String name = headers.nextElement().toString();
+                writer.println("request.header['" + name + "']=" + Collections.list(request.getHeaders(name)));
+            }
         }
     }
     
@@ -81,7 +98,6 @@ public class XForwardedFilterTest {
         String actual = XForwardedFilter.listToCommaDelimitedString(null);
         assertEquals("", actual);
     }
-    
     
     @Test
     public void testHeaderNamesCaseInsensitivity() {
@@ -366,7 +382,7 @@ public class XForwardedFilterTest {
      */
     @Test
     public void testWithJetty() throws Exception {
-
+        
         // SETUP
         int port = 6666;
         Server server = new Server(port);
@@ -383,29 +399,29 @@ public class XForwardedFilterTest {
         context.addServlet(new ServletHolder(mockServlet), "/test");
         
         server.start();
-        
-        // TEST
-        HttpURLConnection httpURLConnection = (HttpURLConnection)new URL("http://localhost:" + port + "/test").openConnection();
-        String expectedRemoteAddr = "my-remote-addr";
-        httpURLConnection.addRequestProperty("x-forwarded-for", expectedRemoteAddr);
-        httpURLConnection.addRequestProperty("x-forwarded-proto", "https");
-        
-        // VALIDATE
-        
-        Assert.assertEquals(HttpURLConnection.HTTP_OK, httpURLConnection.getResponseCode());        
-        HttpServletRequest request = mockServlet.getRequest();
-        Assert.assertNotNull(request);
-        
-        // VALIDATE X-FOWARDED-FOR
-        Assert.assertEquals(expectedRemoteAddr, request.getRemoteAddr());
-        Assert.assertEquals(expectedRemoteAddr, request.getRemoteHost());
-        
-        // VALIDATE X-FORWARDED-PROTO
-        Assert.assertTrue(request.isSecure());
-        Assert.assertEquals("https", request.getScheme());
-        Assert.assertEquals(443, request.getServerPort());
-        
-        server.stop();
-        
+        try {
+            // TEST
+            HttpURLConnection httpURLConnection = (HttpURLConnection)new URL("http://localhost:" + port + "/test").openConnection();
+            String expectedRemoteAddr = "my-remote-addr";
+            httpURLConnection.addRequestProperty("x-forwarded-for", expectedRemoteAddr);
+            httpURLConnection.addRequestProperty("x-forwarded-proto", "https");
+            
+            // VALIDATE
+            
+            Assert.assertEquals(HttpURLConnection.HTTP_OK, httpURLConnection.getResponseCode());
+            HttpServletRequest request = mockServlet.getRequest();
+            Assert.assertNotNull(request);
+            
+            // VALIDATE X-FOWARDED-FOR
+            Assert.assertEquals(expectedRemoteAddr, request.getRemoteAddr());
+            Assert.assertEquals(expectedRemoteAddr, request.getRemoteHost());
+            
+            // VALIDATE X-FORWARDED-PROTO
+            Assert.assertTrue(request.isSecure());
+            Assert.assertEquals("https", request.getScheme());
+            Assert.assertEquals(443, request.getServerPort());
+        } finally {
+            server.stop();
+        }
     }
 }
