@@ -50,13 +50,14 @@ import org.slf4j.LoggerFactory;
  * Servlet filter to integrate "X-Forwarded-For" and "X-Forwarded-Proto" HTTP headers.
  * </p>
  * <p>
- * Most of the design of this Servlet Filter is a port of <a href="http://httpd.apache.org/docs/trunk/mod/mod_remoteip.html">mod_remoteip</a>, this servlet filter replaces the apparent
- * client remote IP address and hostname for the request with the IP address list presented by a proxy or a load balancer via a request
- * headers (e.g. "X-Forwarded-For").
+ * Most of the design of this Servlet Filter is a port of <a
+ * href="http://httpd.apache.org/docs/trunk/mod/mod_remoteip.html">mod_remoteip</a>, this servlet filter replaces the apparent client remote
+ * IP address and hostname for the request with the IP address list presented by a proxy or a load balancer via a request headers (e.g.
+ * "X-Forwarded-For").
  * </p>
  * <p>
- * Another feature of this servlet filter is to replace the apparent scheme (http/https) and server port with the scheme presented by a proxy or a
- * load balancer via a request header (e.g. "X-Forwarded-Proto").
+ * Another feature of this servlet filter is to replace the apparent scheme (http/https) and server port with the scheme presented by a
+ * proxy or a load balancer via a request header (e.g. "X-Forwarded-Proto").
  * </p>
  * <p>
  * This servlet filter proceeds as follows:
@@ -91,7 +92,8 @@ import org.slf4j.LoggerFactory;
  * </tr>
  * <tr>
  * <td>remoteIPHeader</td>
- * <td>Name of the Http Header read by this servlet filter that holds the list of traversed IP addresses starting from the requesting client</td>
+ * <td>Name of the Http Header read by this servlet filter that holds the list of traversed IP addresses starting from the requesting client
+ * </td>
  * <td>RemoteIPHeader</td>
  * <td>Compliant http header name</td>
  * <td>x-forwarded-for</td>
@@ -117,15 +119,15 @@ import org.slf4j.LoggerFactory;
  * </tr>
  * <tr>
  * <td>trustedProxies</td>
- * <td>List of trusted proxies ip adress. If they appear in the <code>remoteIpHeader</code> value, they will be trusted and will appear
- * in the <code>proxiesHeader</code> value</td>
+ * <td>List of trusted proxies ip adress. If they appear in the <code>remoteIpHeader</code> value, they will be trusted and will appear in
+ * the <code>proxiesHeader</code> value</td>
  * <td>RemoteIPTrustedProxy</td>
  * <td>Comma delimited list of regular expressions (in the syntax supported by the {@link java.util.regex.Pattern} library)</td>
  * <td>&nbsp;</td>
  * </tr>
  * <tr>
  * <td>protocolHeader</td>
- * <td>Name of the http header read by this servlet filter that holds the flag that this request </td>
+ * <td>Name of the http header read by this servlet filter that holds the flag that this request</td>
  * <td>N/A</td>
  * <td>Compliant http header name like <code>X-Forwarded-Proto</code>, <code>X-Forwarded-Ssl</code> or <code>Front-End-Https</code></td>
  * <td><code>null</code></td>
@@ -401,7 +403,6 @@ import org.slf4j.LoggerFactory;
  * <hr/>
  */
 public class XForwardedFilter implements Filter {
-    
     public static class XForwardedRequest extends HttpServletRequestWrapper {
         
         final static ThreadLocal<SimpleDateFormat[]> threadLocalDateFormats = new ThreadLocal<SimpleDateFormat[]>() {
@@ -468,12 +469,21 @@ public class XForwardedFilter implements Filter {
         
         @Override
         public String getHeader(String name) {
-            List<String> values = headers.get(name);
-            if (values == null || values.isEmpty()) {
+            Map.Entry<String, List<String>> header = getHeaderEntry(name);
+            if (header == null || header.getValue() == null || header.getValue().isEmpty()) {
                 return null;
             } else {
-                return values.get(0);
+                return header.getValue().get(0);
             }
+        }
+        
+        protected Map.Entry<String, List<String>> getHeaderEntry(String name) {
+            for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(name)) {
+                    return entry;
+                }
+            }
+            return null;
         }
         
         @Override
@@ -483,11 +493,12 @@ public class XForwardedFilter implements Filter {
         
         @Override
         public Enumeration<?> getHeaders(String name) {
-            List<String> values = headers.get(name);
-            if (values == null) {
-                values = Collections.emptyList();
+            Map.Entry<String, List<String>> header = getHeaderEntry(name);
+            if (header == null || header.getValue() == null) {
+                return Collections.enumeration(Collections.emptyList());
+            } else {
+                return Collections.enumeration(header.getValue());
             }
-            return Collections.enumeration(values);
         }
         
         @Override
@@ -523,11 +534,21 @@ public class XForwardedFilter implements Filter {
         }
         
         public void removeHeader(String name) {
-            headers.remove(name);
+            Map.Entry<String, List<String>> header = getHeaderEntry(name);
+            if (header != null) {
+                headers.remove(header.getKey());
+            }
         }
         
         public void setHeader(String name, String value) {
-            headers.put(name, Arrays.asList(value));
+            List<String> values = Arrays.asList(value);
+            Map.Entry<String, List<String>> header = getHeaderEntry(name);
+            if (header == null) {
+                headers.put(name, values);
+            } else {
+                header.setValue(values);
+            }
+            
         }
         
         public void setRemoteAddr(String remoteAddr) {
@@ -556,6 +577,8 @@ public class XForwardedFilter implements Filter {
      */
     private static final Pattern commaSeparatedValuesPattern = Pattern.compile("\\s*,\\s*");
     
+    protected static final String HTTPS_SERVER_PORT_PARAMETER = "httpsServerPort";
+    
     protected static final String INTERNAL_PROXIES_PARAMETER = "allowedInternalProxies";
     
     /**
@@ -572,8 +595,6 @@ public class XForwardedFilter implements Filter {
     protected static final String REMOTE_IP_HEADER_PARAMETER = "remoteIPHeader";
     
     protected static final String TRUSTED_PROXIES_PARAMETER = "trustedProxies";
-    
-    protected static final String HTTPS_SERVER_PORT_PARAMETER = "httpsServerPort";
     
     /**
      * Convert a given comma delimited list of regular expressions into an array of compiled {@link Pattern}

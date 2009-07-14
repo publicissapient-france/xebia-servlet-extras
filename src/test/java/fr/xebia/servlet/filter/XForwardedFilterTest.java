@@ -82,6 +82,17 @@ public class XForwardedFilterTest {
         assertEquals("", actual);
     }
     
+    
+    @Test
+    public void testHeaderNamesCaseInsensitivity() {
+        XForwardedFilter.XForwardedRequest request = new XForwardedFilter.XForwardedRequest(new MockHttpServletRequest());
+        request.setHeader("myheader", "lower Case");
+        request.setHeader("MYHEADER", "UPPER CASE");
+        request.setHeader("MyHeader", "Camel Case");
+        assertEquals(1, request.headers.size());
+        assertEquals("Camel Case", request.getHeader("myheader"));
+    }
+    
     @Test
     public void testInvokeAllowedRemoteAddrWithNullRemoteIpHeader() throws Exception {
         // PREPARE
