@@ -5,11 +5,11 @@
    <artifactId>xebia-servlet-extras</artifactId>
    <packaging>jar</packaging>
    <description>Extras for Servlet API</description>
-   <version>0.2</version>
+   <version>0.3-SNAPSHOT</version>
    <scm>
-      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-0.2</connection>
-      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-0.2</developerConnection>
-      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-0.2</url>
+      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</connection>
+      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</developerConnection>
+      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</url>
    </scm>
    <build>
       <plugins>
