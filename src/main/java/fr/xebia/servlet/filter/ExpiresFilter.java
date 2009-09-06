@@ -45,6 +45,16 @@ import org.slf4j.LoggerFactory;
  * href="http://httpd.apache.org/docs/2.2/mod/mod_expires.html">Apache
  * mod_expires</a>.
  * 
+ * <p>
+ * Note : "Cache-Control" header is modified to add the "max-age" directive
+ * instead of adding a second "Cache-Control" header because mod_expires works
+ * like this. It makes senses as the <a
+ * href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.9">RFC
+ * 1616 - Hypertext Transfer Protocol -- HTTP/1.1, Cache-Control chapter</a>
+ * does not state that the "Cache-Control" header can appear several times to
+ * hold several directives.
+ * </p>
+ * 
  * @author <a href="mailto:cyrille@cyrilleleclerc.com">Cyrille Le Clerc</a>
  */
 public class ExpiresFilter implements Filter {
@@ -86,9 +96,9 @@ public class ExpiresFilter implements Filter {
     }
 
     protected static class ExpiresConfiguration {
-        final protected List<Duration> durations;
+        private List<Duration> durations;
 
-        final protected StartingPoint startingPoint;
+        private StartingPoint startingPoint;
 
         private ExpiresConfiguration(StartingPoint startingPoint, List<Duration> durations) {
             super();
@@ -105,9 +115,19 @@ public class ExpiresFilter implements Filter {
         }
     }
 
+    /**
+     * Data structure for an Http header. It is basically a key-value pair.
+     */
     protected static class Header {
+        /**
+         * Immutable name of the http header
+         */
         final private String name;
 
+        /**
+         * Mutable value of the header. It can be a {@link String}, a
+         * {@link Long} to hold a date or an {@link Integer}.
+         */
         private Object value;
 
         public Header(String name, Object value) {
@@ -129,10 +149,28 @@ public class ExpiresFilter implements Filter {
         }
     }
 
+    /**
+     * Expiration configuration starting point. Either the time the
+     * html-page/servlet-response was served ({@link StartingPoint#ACCESS_TIME})
+     * or the last time the html-page/servlet-response was modified (
+     * {@link StartingPoint#LAST_MODIFICATION_TIME}).
+     */
     protected enum StartingPoint {
         ACCESS_TIME, LAST_MODIFICATION_TIME
     }
 
+    /**
+     * <p>
+     * Wrapping extension of the {@link HttpServletResponse} to :
+     * <ul>
+     * <li>Trap the "Start Write Response Body" event.</li>
+     * <li>Have read access to http headers instead of just being able to know
+     * if a header with a given name has been set (
+     * {@link HttpServletResponse#containsHeader(String)}).</li>
+     * <li>Differ http headers writing in the response stream to be able to
+     * modify them.</li>
+     * </ul>
+     */
     public class XHttpServletResponse extends HttpServletResponseWrapper {
 
         private List<Header> headers = new ArrayList<Header>();
@@ -290,6 +328,10 @@ public class ExpiresFilter implements Filter {
 
     }
 
+    /**
+     * Wrapping extension of {@link PrintWriter} to trap the
+     * "Start Write Response Body" event.
+     */
     public class XPrintWriter extends PrintWriter {
         private PrintWriter out;
 
@@ -329,7 +371,7 @@ public class ExpiresFilter implements Filter {
         private void fireWriteStartEvent() {
             if (!writeStarted) {
                 writeStarted = true;
-                onStartWrite(request, response);
+                onStartWriteResponseBody(request, response);
             }
         }
 
@@ -470,6 +512,10 @@ public class ExpiresFilter implements Filter {
 
     }
 
+    /**
+     * Wrapping extension of {@link ServletOutputStream} to trap the
+     * "Start Write Response Body" event.
+     */
     public class XServletOutputStream extends ServletOutputStream {
 
         private HttpServletRequest request;
@@ -495,7 +541,7 @@ public class ExpiresFilter implements Filter {
         private void fireWriteStartEvent() {
             if (!writeStarted) {
                 writeStarted = true;
-                onStartWrite(request, response);
+                onStartWriteResponseBody(request, response);
             }
         }
 
@@ -600,6 +646,10 @@ public class ExpiresFilter implements Filter {
 
     private static final String HEADER_EXPIRES = "Expires";
 
+    /**
+     * Returns <code>true</code> if the given <code>str</code> contains the
+     * given <code>searchStr</code>.
+     */
     protected static boolean contains(String str, String searchStr) {
         if (str == null || searchStr == null) {
             return false;
@@ -607,10 +657,18 @@ public class ExpiresFilter implements Filter {
         return str.indexOf(searchStr) >= 0;
     }
 
+    /**
+     * Returns <code>true</code> if the given <code>str</code> is
+     * <code>null</code> or has a zero characters length.
+     */
     protected static boolean isEmpty(String str) {
         return str == null || str.length() == 0;
     }
 
+    /**
+     * Returns <code>true</code> if the given <code>str</code> has at least one
+     * character (can be a withespace).
+     */
     protected static boolean isNotEmpty(String str) {
         return !isEmpty(str);
     }
@@ -633,6 +691,13 @@ public class ExpiresFilter implements Filter {
 
     private ExpiresConfiguration defaultExpiresConfiguration;
 
+    /**
+     * Returns the expiration date of the given {@link XHttpServletResponse} or
+     * <code>null</code> if no expiration date has been configured for the
+     * declared content type.
+     * 
+     * @see HttpServletResponse#getContentType()
+     */
     private Date getExpirationDate(XHttpServletResponse response) {
         ExpiresConfiguration configuration = expiresConfigurationByContentType.get(response.getContentType());
 
@@ -672,7 +737,18 @@ public class ExpiresFilter implements Filter {
 
     }
 
-    public void onStartWrite(HttpServletRequest request, XHttpServletResponse response) {
+    /**
+     * <p>
+     * If no expiration header has been set by the servlet and an expiration has
+     * been defined in the {@link ExpiresFilter} configuration, sets the
+     * "Expires header" and the attribute "max-age" of the "Cache-Control"
+     * header.
+     * </p>
+     * <p>
+     * Must be called on the "Start Write Response Body" event.
+     * </p>
+     */
+    public void onStartWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
         String cacheControlHeader = response.getHeaderValue(HEADER_CACHE_CONTROL);
         String expiresHeader = response.getHeaderValue(HEADER_EXPIRES);
         boolean expirationHeaderExists = isNotEmpty(expiresHeader) || contains(cacheControlHeader, "max-age");
