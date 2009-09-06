@@ -220,7 +220,7 @@ public class ExpiresFilter implements Filter {
             if (headersAlreadyFlushed) {
                 return super.containsHeader(name);
             } else {
-                return getHeader(name) != null;
+                return getHeaderObject(name) != null;
             }
         }
 
@@ -243,7 +243,7 @@ public class ExpiresFilter implements Filter {
             headersAlreadyFlushed = true;
         }
 
-        protected Header getHeader(String name) {
+        private Header getHeaderObject(String name) {
             for (Header header : headers) {
                 if (header.getName().equalsIgnoreCase(name)) {
                     return header;
@@ -252,13 +252,13 @@ public class ExpiresFilter implements Filter {
             return null;
         }
 
-        protected String getHeaderValue(String name) {
-            Header header = getHeader(name);
+        protected String getStringHeader(String name) {
+            Header header = getHeaderObject(name);
             return header == null ? null : header.getValue().toString();
         }
 
         protected Long getDateHeader(String name) {
-            Header header = getHeader(name);
+            Header header = getHeaderObject(name);
             if (header == null) {
                 return null;
             } else if (header.getValue() instanceof Long) {
@@ -289,7 +289,7 @@ public class ExpiresFilter implements Filter {
             if (headersAlreadyFlushed) {
                 super.setDateHeader(name, date);
             } else {
-                Header header = getHeader(name);
+                Header header = getHeaderObject(name);
                 if (header == null) {
                     addDateHeader(name, date);
                 } else {
@@ -303,7 +303,7 @@ public class ExpiresFilter implements Filter {
             if (headersAlreadyFlushed) {
                 super.setHeader(name, value);
             } else {
-                Header header = getHeader(name);
+                Header header = getHeaderObject(name);
                 if (header == null) {
                     addHeader(name, value);
                 } else {
@@ -317,7 +317,7 @@ public class ExpiresFilter implements Filter {
             if (headersAlreadyFlushed) {
                 super.setIntHeader(name, value);
             } else {
-                Header header = getHeader(name);
+                Header header = getHeaderObject(name);
                 if (header == null) {
                     addIntHeader(name, value);
                 } else {
@@ -349,26 +349,26 @@ public class ExpiresFilter implements Filter {
         }
 
         public PrintWriter append(char c) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             return out.append(c);
         }
 
         public PrintWriter append(CharSequence csq) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             return out.append(csq);
         }
 
         public PrintWriter append(CharSequence csq, int start, int end) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             return out.append(csq, start, end);
         }
 
         public void close() {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.close();
         }
 
-        private void fireWriteStartEvent() {
+        private void fireOnStartWriteResponseBodyEvent() {
             if (!writeStarted) {
                 writeStarted = true;
                 onStartWriteResponseBody(request, response);
@@ -376,137 +376,137 @@ public class ExpiresFilter implements Filter {
         }
 
         public void flush() {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.flush();
         }
 
         public void print(boolean b) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(b);
         }
 
         public void print(char c) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(c);
         }
 
         public void print(char[] s) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(s);
         }
 
         public void print(double d) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(d);
         }
 
         public void print(float f) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(f);
         }
 
         public void print(int i) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(i);
         }
 
         public void print(long l) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(l);
         }
 
         public void print(Object obj) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(obj);
         }
 
         public void print(String s) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.print(s);
         }
 
         public PrintWriter printf(Locale l, String format, Object... args) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             return out.printf(l, format, args);
         }
 
         public PrintWriter printf(String format, Object... args) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             return out.printf(format, args);
         }
 
         public void println() {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println();
         }
 
         public void println(boolean x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(char x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(char[] x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(double x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(float x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(int x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(long x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(Object x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(String x) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void write(char[] buf) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.write(buf);
         }
 
         public void write(char[] buf, int off, int len) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.write(buf, off, len);
         }
 
         public void write(int c) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.write(c);
         }
 
         public void write(String s) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.write(s);
         }
 
         public void write(String s, int off, int len) {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             out.write(s, off, len);
         }
 
@@ -534,11 +534,11 @@ public class ExpiresFilter implements Filter {
         }
 
         public void close() throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.close();
         }
 
-        private void fireWriteStartEvent() {
+        private void fireOnStartWriteResponseBodyEvent() {
             if (!writeStarted) {
                 writeStarted = true;
                 onStartWriteResponseBody(request, response);
@@ -546,97 +546,97 @@ public class ExpiresFilter implements Filter {
         }
 
         public void flush() throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.flush();
         }
 
         public void print(boolean b) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.print(b);
         }
 
         public void print(char c) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.print(c);
         }
 
         public void print(double d) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.print(d);
         }
 
         public void print(float f) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.print(f);
         }
 
         public void print(int i) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.print(i);
         }
 
         public void print(long l) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.print(l);
         }
 
         public void print(String s) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.print(s);
         }
 
         public void println() throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println();
         }
 
         public void println(boolean b) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println(b);
         }
 
         public void println(char c) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println(c);
         }
 
         public void println(double d) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println(d);
         }
 
         public void println(float f) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println(f);
         }
 
         public void println(int i) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println(i);
         }
 
         public void println(long l) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println(l);
         }
 
         public void println(String s) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.println(s);
         }
 
         public void write(byte[] b) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.write(b);
         }
 
         public void write(byte[] b, int off, int len) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.write(b, off, len);
         }
 
         public void write(int b) throws IOException {
-            fireWriteStartEvent();
+            fireOnStartWriteResponseBodyEvent();
             servletOutputStream.write(b);
         }
 
@@ -749,8 +749,8 @@ public class ExpiresFilter implements Filter {
      * </p>
      */
     public void onStartWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
-        String cacheControlHeader = response.getHeaderValue(HEADER_CACHE_CONTROL);
-        String expiresHeader = response.getHeaderValue(HEADER_EXPIRES);
+        String cacheControlHeader = response.getStringHeader(HEADER_CACHE_CONTROL);
+        String expiresHeader = response.getStringHeader(HEADER_EXPIRES);
         boolean expirationHeaderExists = isNotEmpty(expiresHeader) || contains(cacheControlHeader, "max-age");
         if (expirationHeaderExists) {
             logger.debug("Expiration header already defined for request {}", request.getRequestURI());
