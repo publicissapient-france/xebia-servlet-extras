@@ -18,10 +18,13 @@ package fr.xebia.servlet.filter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -46,6 +49,62 @@ import org.slf4j.LoggerFactory;
  */
 public class ExpiresFilter implements Filter {
 
+    protected static class Duration {
+
+        public DurationUnit getUnit() {
+            return unit;
+        }
+
+        final protected int amout;
+
+        final protected DurationUnit unit;
+
+        public Duration(int amout, DurationUnit unit) {
+            super();
+            this.amout = amout;
+            this.unit = unit;
+        }
+
+        public int getAmout() {
+            return amout;
+        }
+    }
+
+    protected enum DurationUnit {
+        DAY(Calendar.DAY_OF_YEAR), MINUTE(Calendar.MINUTE), MONTH(Calendar.MONTH), SECOND(Calendar.SECOND), WEEK(Calendar.WEEK_OF_YEAR), YEAR(
+                Calendar.YEAR);
+        public int getCalendardField() {
+            return calendardField;
+        }
+
+        private final int calendardField;
+
+        private DurationUnit(int calendardField) {
+            this.calendardField = calendardField;
+        }
+
+    }
+
+    protected static class ExpiresConfiguration {
+        final protected List<Duration> durations;
+
+        final protected StartingPoint startingPoint;
+
+        private ExpiresConfiguration(StartingPoint startingPoint, List<Duration> durations) {
+            super();
+            this.startingPoint = startingPoint;
+            this.durations = durations;
+        }
+
+        public List<Duration> getDurations() {
+            return durations;
+        }
+
+        public StartingPoint getStartingPoint() {
+            return startingPoint;
+        }
+    }
+
     protected static class Header {
         final private String name;
 
@@ -68,6 +127,10 @@ public class ExpiresFilter implements Filter {
         public void setValue(Object value) {
             this.value = value;
         }
+    }
+
+    protected enum StartingPoint {
+        ACCESS_TIME, LAST_MODIFICATION_TIME
     }
 
     public class XHttpServletResponse extends HttpServletResponseWrapper {
@@ -154,6 +217,17 @@ public class ExpiresFilter implements Filter {
         protected String getHeaderValue(String name) {
             Header header = getHeader(name);
             return header == null ? null : header.getValue().toString();
+        }
+
+        protected Long getDateHeader(String name) {
+            Header header = getHeader(name);
+            if (header == null) {
+                return null;
+            } else if (header.getValue() instanceof Long) {
+                return (Long) header.getValue();
+            } else {
+                return null;
+            }
         }
 
         @Override
@@ -553,14 +627,48 @@ public class ExpiresFilter implements Filter {
         } else {
             chain.doFilter(request, response);
         }
-    }
+    };
+
+    private Map<String, ExpiresConfiguration> expiresConfigurationByContentType;
+
+    private ExpiresConfiguration defaultExpiresConfiguration;
 
     private Date getExpirationDate(XHttpServletResponse response) {
-        // TODO Auto-generated method stub
-        return null;
+        ExpiresConfiguration configuration = expiresConfigurationByContentType.get(response.getContentType());
+
+        if (configuration == null) {
+            configuration = defaultExpiresConfiguration;
+            logger.trace("No Expires configuration found for content type {}, use default ", response.getContentType(), configuration);
+        }
+        if (configuration == null) {
+            return null;
+        }
+        Calendar calendar;
+        switch (configuration.getStartingPoint()) {
+        case ACCESS_TIME:
+            calendar = GregorianCalendar.getInstance();
+            break;
+        case LAST_MODIFICATION_TIME:
+            calendar = GregorianCalendar.getInstance();
+            Long lastModified = response.getDateHeader("Last-Modified");
+            if (lastModified == null) {
+                // Last-Modified header not found, use now
+            } else {
+                calendar.setTimeInMillis(lastModified);
+            }
+            break;
+        default:
+            throw new IllegalStateException();
+        }
+        for (Duration duration : configuration.getDurations()) {
+            calendar.add(duration.getUnit().getCalendardField(), duration.getAmout());
+        }
+
+        return calendar.getTime();
     }
 
     public void init(FilterConfig filterConfig) throws ServletException {
+        // TODO : load configuration
 
     }
 
@@ -592,5 +700,4 @@ public class ExpiresFilter implements Filter {
         // Flush headers
         response.flushHeaders();
     }
-
 }
