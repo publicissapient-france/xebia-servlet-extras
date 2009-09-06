@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Sets {@link RequestFacade#isSecure()} to <code>true</code> if
  * {@link ServletRequest#getRemoteAddr()} matches one of the
- * <code>securedRemoteAddresses</code> of this valve.
+ * <code>securedRemoteAddresses</code> of this filter.
  * 
  * @author <a href="mailto:cyrille@cyrilleleclerc.com">Cyrille Le Clerc</a>
  */
@@ -102,39 +102,46 @@ public class SecuredRemoteAddressFilter implements Filter {
             Pattern.compile("192\\.168\\.\\d{1,3}\\.\\d{1,3}"), Pattern.compile("172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3}"),
             Pattern.compile("169\\.254\\.\\d{1,3}\\.\\d{1,3}"), Pattern.compile("127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}") };
 
+    /**
+     * Nothing to do. No resource to release.
+     */
     public void destroy() {
 
     }
 
-    public void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
-        HttpServletRequest xRequest;
-        if (!request.isSecure() && matchesOne(request.getRemoteAddr(), securedRemoteAddresses)) {
-            xRequest = new HttpServletRequestWrapper(request) {
-                @Override
-                public boolean isSecure() {
-                    return true;
-                }
-            };
+    /**
+     * If incoming remote address matches one of the declared IP pattern, wraps
+     * the incoming {@link HttpServletRequest} to override
+     * {@link HttpServletRequest#isSecure()} to set it to <code>true</code>.
+     */
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+        ServletRequest xRequest;
+        if (request instanceof HttpServletRequest && response instanceof HttpServletResponse) {
+            if (!request.isSecure() && matchesOne(request.getRemoteAddr(), securedRemoteAddresses)) {
+                xRequest = new HttpServletRequestWrapper((HttpServletRequest) request) {
+                    @Override
+                    public boolean isSecure() {
+                        return true;
+                    }
+                };
+            } else {
+                xRequest = request;
+            }
+            if (logger.isDebugEnabled()) {
+                logger.debug("Incoming request uri=" + ((HttpServletRequest) request).getRequestURI() + " with originalSecure='"
+                        + request.isSecure() + "', remoteAddr='" + request.getRemoteAddr() + "' will be seen with newSecure='"
+                        + xRequest.isSecure() + "'");
+            }
         } else {
             xRequest = request;
         }
-        if (logger.isDebugEnabled()) {
-            logger.debug("Incoming request uri=" + request.getRequestURI() + " with originalSecure='" + request.isSecure()
-                    + "', remoteAddr='" + request.getRemoteAddr() + "' will be seen with newSecure='" + xRequest.isSecure() + "'");
-        }
 
         chain.doFilter(xRequest, response);
-
     }
 
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        if (request instanceof HttpServletRequest && response instanceof HttpServletResponse) {
-            doFilter((HttpServletRequest) request, (HttpServletResponse) response, chain);
-        } else {
-            chain.doFilter(request, response);
-        }
-    }
-
+    /**
+     * Compile the secured remote addresses patterns. 
+     */
     public void init(FilterConfig filterConfig) throws ServletException {
         String comaDelimitedSecuredRemoteAddresses = filterConfig.getInitParameter(SECURED_REMOTE_ADDRESSES_PARAMETER);
         if (comaDelimitedSecuredRemoteAddresses != null) {
