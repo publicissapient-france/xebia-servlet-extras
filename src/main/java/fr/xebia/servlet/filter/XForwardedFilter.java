@@ -754,13 +754,13 @@ public class XForwardedFilter implements Filter {
             
             if (logger.isDebugEnabled()) {
                 logger.debug("Incoming request " + request.getRequestURI() + " with originalRemoteAddr '" + request.getRemoteAddr()
-                             + "', originalRemoteHost='" + request.getRemoteHost() + "', originalSecure='" + request.isSecure()
-                             + "', originalScheme='" + request.getScheme() + "', original[" + remoteIPHeader + "]='"
-                             + request.getHeader(remoteIPHeader) + ", original[" + protocolHeader + "]='"
-                             + request.getHeader(protocolHeader) + "' will be seen as newRemoteAddr='" + xRequest.getRemoteAddr()
-                             + "', newRemoteHost='" + xRequest.getRemoteHost() + "', newScheme='" + xRequest.getScheme() + "', newSecure='"
-                             + xRequest.isSecure() + "', new[" + remoteIPHeader + "]='" + xRequest.getHeader(remoteIPHeader) + ", new["
-                             + proxiesHeader + "]='" + xRequest.getHeader(proxiesHeader) + "'");
+                        + "', originalRemoteHost='" + request.getRemoteHost() + "', originalSecure='" + request.isSecure()
+                        + "', originalScheme='" + request.getScheme() + "', original[" + remoteIPHeader + "]='"
+                        + request.getHeader(remoteIPHeader) + ", original[" + protocolHeader + "]='"
+                        + (protocolHeader == null ? null : request.getHeader(protocolHeader)) + "' will be seen as newRemoteAddr='"
+                        + xRequest.getRemoteAddr() + "', newRemoteHost='" + xRequest.getRemoteHost() + "', newScheme='"
+                        + xRequest.getScheme() + "', newSecure='" + xRequest.isSecure() + "', new[" + remoteIPHeader + "]='"
+                        + xRequest.getHeader(remoteIPHeader) + ", new[" + proxiesHeader + "]='" + xRequest.getHeader(proxiesHeader) + "'");
             }
             chain.doFilter(xRequest, response);
         } else {
