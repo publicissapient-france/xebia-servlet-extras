@@ -99,14 +99,14 @@ import org.slf4j.LoggerFactory;
  * <td>x-forwarded-for</td>
  * </tr>
  * <tr>
- * <td>internalProxies</td>
+ * <td>allowedInternalProxies</td>
  * <td>List of internal proxies ip adress. If they appear in the <code>remoteIpHeader</code> value, they will be trusted and will not appear
  * in the <code>proxiesHeader</code> value</td>
  * <td>RemoteIPInternalProxy</td>
  * <td>Comma delimited list of regular expressions (in the syntax supported by the {@link java.util.regex.Pattern} library)</td>
- * <td>10\.\d{1,3}\.\d{1,3}\.\d{1,3}, 192\.168\.\d{1,3}\.\d{1,3}, 169\.254\.\d{1,3}\.\d{1,3}, 127\.\d{1,3}\.\d{1,3}\.\d{1,3} <br/>
- * By default, 10/8, 192.168/16, 169.254/16 and 127/8 are allowed ; 172.16/12 has not been enabled by default because it is complex to
- * describe with regular expressions</td>
+ * <td>10\.\d{1,3}\.\d{1,3}\.\d{1,3}, 192\.168\.\d{1,3}\.\d{1,3}, 172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3}, 
+ * 169\.254\.\d{1,3}\.\d{1,3}, 127\.\d{1,3}\.\d{1,3}\.\d{1,3} <br/>
+ * By default, 10/8, 192.168/16, 172.16/12, 169.254/16 and 127/8 are allowed</td>
  * </tr>
  * </tr>
  * <tr>
@@ -161,7 +161,7 @@ import org.slf4j.LoggerFactory;
  *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
  *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
  *    &lt;init-param&gt;
- *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *       &lt;param-name&gt;allowedInternalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
  *    &lt;/init-param&gt;
  *    &lt;init-param&gt;
  *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
@@ -238,7 +238,7 @@ import org.slf4j.LoggerFactory;
  *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
  *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
  *    &lt;init-param&gt;
- *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *       &lt;param-name&gt;allowedInternalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
  *    &lt;/init-param&gt;
  *    &lt;init-param&gt;
  *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
@@ -295,7 +295,7 @@ import org.slf4j.LoggerFactory;
  *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
  *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
  *    &lt;init-param&gt;
- *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *       &lt;param-name&gt;allowedInternalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
  *    &lt;/init-param&gt;
  *    &lt;init-param&gt;
  *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
@@ -353,7 +353,7 @@ import org.slf4j.LoggerFactory;
  *    &lt;filter-name&gt;XForwardedFilter&lt;/filter-name&gt;
  *    &lt;filter-class&gt;fr.xebia.servlet.filter.XForwardedFilter&lt;/filter-class&gt;
  *    &lt;init-param&gt;
- *       &lt;param-name&gt;internalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *       &lt;param-name&gt;allowedInternalProxies&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
  *    &lt;/init-param&gt;
  *    &lt;init-param&gt;
  *       &lt;param-name&gt;remoteIPHeader&lt;/param-name&gt;&lt;param-value&gt;x-forwarded-for&lt;/param-value&gt;
@@ -664,10 +664,9 @@ public class XForwardedFilter implements Filter {
     /**
      * @see #setInternalProxies(String)
      */
-    private Pattern[] internalProxies = new Pattern[] {
-        Pattern.compile("10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"), Pattern.compile("192\\.168\\.\\d{1,3}\\.\\d{1,3}"),
-        Pattern.compile("169\\.254\\.\\d{1,3}\\.\\d{1,3}"), Pattern.compile("127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")
-    };
+    private Pattern[] allowedInternalProxies = new Pattern[] { Pattern.compile("10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"),
+            Pattern.compile("192\\.168\\.\\d{1,3}\\.\\d{1,3}"), Pattern.compile("172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3}"), 
+            Pattern.compile("169\\.254\\.\\d{1,3}\\.\\d{1,3}"), Pattern.compile("127\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}") };
     
     /**
      * @see #setProtocolHeader(String)
@@ -696,7 +695,7 @@ public class XForwardedFilter implements Filter {
     
     public void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain chain) throws IOException, ServletException {
         
-        if (matchesOne(request.getRemoteAddr(), internalProxies)) {
+        if (matchesOne(request.getRemoteAddr(), allowedInternalProxies)) {
             String remoteIp = null;
             // In java 6, proxiesHeaderValue should be declared as a java.util.Deque
             LinkedList<String> proxiesHeaderValue = new LinkedList<String>();
@@ -707,8 +706,8 @@ public class XForwardedFilter implements Filter {
             for (idx = remoteIPHeaderValue.length - 1; idx >= 0; idx--) {
                 String currentRemoteIp = remoteIPHeaderValue[idx];
                 remoteIp = currentRemoteIp;
-                if (matchesOne(currentRemoteIp, internalProxies)) {
-                    // do nothing, internalProxies IPs are not appended to the
+                if (matchesOne(currentRemoteIp, allowedInternalProxies)) {
+                    // do nothing, allowedInternalProxies IPs are not appended to the
                 } else if (matchesOne(currentRemoteIp, trustedProxies)) {
                     proxiesHeaderValue.addFirst(currentRemoteIp);
                 } else {
@@ -785,7 +784,7 @@ public class XForwardedFilter implements Filter {
     }
     
     public Pattern[] getInternalProxies() {
-        return internalProxies;
+        return allowedInternalProxies;
     }
     
     public String getProtocolHeader() {
@@ -810,7 +809,7 @@ public class XForwardedFilter implements Filter {
     
     public void init(FilterConfig filterConfig) throws ServletException {
         if (filterConfig.getInitParameter(INTERNAL_PROXIES_PARAMETER) != null) {
-            setInternalProxies(filterConfig.getInitParameter(INTERNAL_PROXIES_PARAMETER));
+            setAllowedInternalProxies(filterConfig.getInitParameter(INTERNAL_PROXIES_PARAMETER));
         }
         
         if (filterConfig.getInitParameter(PROTOCOL_HEADER_PARAMETER) != null) {
@@ -844,6 +843,19 @@ public class XForwardedFilter implements Filter {
     
     /**
      * <p>
+     * Comma delimited list of internal proxies. Expressed with regular expressions.
+     * </p>
+     * <p>
+     * Default value : 10\.\d{1,3}\.\d{1,3}\.\d{1,3}, 192\.168\.\d{1,3}\.\d{1,3}, 172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3}, 
+     * 127\.\d{1,3}\.\d{1,3}\.\d{1,3}
+     * </p>
+     */
+    public void setAllowedInternalProxies(String allowedInternalProxies) {
+        this.allowedInternalProxies = commaDelimitedListToPatternArray(allowedInternalProxies);
+    }
+    
+    /**
+     * <p>
      * Server Port value if the {@link #protocolHeader} indicates HTTPS
      * </p>
      * <p>
@@ -852,18 +864,6 @@ public class XForwardedFilter implements Filter {
      */
     public void setHttpsServerPort(int httpsServerPort) {
         this.httpsServerPort = httpsServerPort;
-    }
-    
-    /**
-     * <p>
-     * Comma delimited list of internal proxies. Can be expressed with regular expressions.
-     * </p>
-     * <p>
-     * Default value : 10\.\d{1,3}\.\d{1,3}\.\d{1,3}, 192\.168\.\d{1,3}\.\d{1,3}, 127\.\d{1,3}\.\d{1,3}\.\d{1,3}
-     * </p>
-     */
-    public void setInternalProxies(String internalProxies) {
-        this.internalProxies = commaDelimitedListToPatternArray(internalProxies);
     }
     
     /**
