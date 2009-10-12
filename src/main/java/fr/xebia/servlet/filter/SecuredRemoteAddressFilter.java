@@ -145,8 +145,21 @@ public class SecuredRemoteAddressFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
         String comaDelimitedSecuredRemoteAddresses = filterConfig.getInitParameter(SECURED_REMOTE_ADDRESSES_PARAMETER);
         if (comaDelimitedSecuredRemoteAddresses != null) {
-            this.securedRemoteAddresses = commaDelimitedListToPatternArray(comaDelimitedSecuredRemoteAddresses);
+            setSecuredRemoteAdresses(comaDelimitedSecuredRemoteAddresses);
         }
     }
 
+    /**
+     * <p>
+     * Comma delimited list of secured remote addresses. Expressed with regular expressions.
+     * </p>
+     * <p>
+     * Default value : 10\.\d{1,3}\.\d{1,3}\.\d{1,3}, 192\.168\.\d{1,3}\.\d{1,3}, 172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3}, 
+     * 127\.\d{1,3}\.\d{1,3}\.\d{1,3}
+     * </p>
+     */
+    public void setSecuredRemoteAdresses(String comaDelimitedSecuredRemoteAddresses){
+        this.securedRemoteAddresses = commaDelimitedListToPatternArray(comaDelimitedSecuredRemoteAddresses);
+
+    }
 }
