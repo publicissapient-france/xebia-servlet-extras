@@ -51,16 +51,18 @@ import org.slf4j.LoggerFactory;
  * <tr>
  * <th>XForwardedFilter property</th>
  * <th>Description</th>
+ * <th>Format</th>
  * <th>Default value</th>
  * </tr>
  * <tr>
  * <td>securedRemoteAddresses</td>
  * <td>IP addresses for which {@link ServletRequest#isSecure()} must return
- * <code>true</code> expressed as a comma delimited list of regular expressions
- * (in the syntax supported by the {@link java.util.regex.Pattern} library)</td>
+ * <code>true</code></td>
+ * <td>Comma delimited list of regular expressions (in the syntax supported by
+ * the {@link java.util.regex.Pattern} library)</td>
  * <td>Class A, B and C <a
  * href="http://en.wikipedia.org/wiki/Private_network">private network IP
- * addresses blocks</a> : 10\.\d{1,3}\.\d{1,3}\.\d{1,3},
+ * address blocks</a> : 10\.\d{1,3}\.\d{1,3}\.\d{1,3},
  * 192\.168\.\d{1,3}\.\d{1,3}, 172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3},
  * 169\.254\.\d{1,3}\.\d{1,3}, 127\.\d{1,3}\.\d{1,3}\.\d{1,3}</td>
  * </tr>
