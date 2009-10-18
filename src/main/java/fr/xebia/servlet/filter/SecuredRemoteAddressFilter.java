@@ -35,9 +35,67 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * <p>
  * Sets {@link RequestFacade#isSecure()} to <code>true</code> if
  * {@link ServletRequest#getRemoteAddr()} matches one of the
  * <code>securedRemoteAddresses</code> of this filter.
+ * </p>
+ * <p>
+ * This filter is often preceded by the {@link XForwardedFilter} to get the
+ * remote address of the client even if the request goes through load balancers
+ * (e.g. F5 Big IP, Nortel Alteon) or proxies (e.g. Apache mod_proxy_http)
+ * </p>
+ * <p>
+ * <strong>Configuration parameters:</strong>
+ * <table border="1">
+ * <tr>
+ * <th>XForwardedFilter property</th>
+ * <th>Description</th>
+ * <th>Default value</th>
+ * </tr>
+ * <tr>
+ * <td>securedRemoteAddresses</td>
+ * <td>IP addresses for which {@link ServletRequest#isSecure()} must return
+ * <code>true</code> expressed as a comma delimited list of regular expressions
+ * (in the syntax supported by the {@link java.util.regex.Pattern} library)</td>
+ * <td>Class A, B and C <a
+ * href="http://en.wikipedia.org/wiki/Private_network">private network IP
+ * addresses blocks</a> : 10\.\d{1,3}\.\d{1,3}\.\d{1,3},
+ * 192\.168\.\d{1,3}\.\d{1,3}, 172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3},
+ * 169\.254\.\d{1,3}\.\d{1,3}, 127\.\d{1,3}\.\d{1,3}\.\d{1,3}</td>
+ * </tr>
+ * </table>
+ * Note : the default configuration is can usually be used as internal servers
+ * are often trusted.
+ * </p>
+ * <p>
+ * <strong>Sample with secured remote addresses limited to 192.168.0.10 and
+ * 192.168.0.11</strong>
+ * </p>
+ * <p>
+ * SecuredRemoteAddressFilter configuration sample :
+ * </p>
+ * 
+ * <code><pre>
+ * &lt;filter&gt;
+ *    &lt;filter-name&gt;SecuredRemoteAddressFilter&lt;/filter-name&gt;
+ *    &lt;filter-class&gt;fr.xebia.servlet.filter.SecuredRemoteAddressFilter&lt;/filter-class&gt;
+ *    &lt;init-param&gt;
+ *       &lt;param-name&gt;securedRemoteAddresses&lt;/param-name&gt;&lt;param-value&gt;192\.168\.0\.10, 192\.168\.0\.11&lt;/param-value&gt;
+ *    &lt;/init-param&gt;
+ * &lt;/filter&gt;
+ * 
+ * &lt;filter-mapping&gt;
+ *    &lt;filter-name&gt;SecuredRemoteAddressFilter&lt;/filter-name&gt;
+ *    &lt;url-pattern&gt;/*&lt;/url-pattern&gt;
+ *    &lt;dispatcher&gt;REQUEST&lt;/dispatcher&gt;
+ * &lt;/filter-mapping&gt;</pre></code>
+ * <p>
+ * A request with
+ * <code>{@link ServletRequest#getRemoteAddr()} = 192.168.0.10 or 192.168.0.11</code>
+ * will be seen as <code>{@link ServletRequest#isSecure()} == true</code> even if
+ * <code>{@link HttpServletRequest#getScheme()} == "http"</code>.
+ * </p>
  * 
  * @author <a href="mailto:cyrille@cyrilleleclerc.com">Cyrille Le Clerc</a>
  */
@@ -140,7 +198,7 @@ public class SecuredRemoteAddressFilter implements Filter {
     }
 
     /**
-     * Compile the secured remote addresses patterns. 
+     * Compile the secured remote addresses patterns.
      */
     public void init(FilterConfig filterConfig) throws ServletException {
         String comaDelimitedSecuredRemoteAddresses = filterConfig.getInitParameter(SECURED_REMOTE_ADDRESSES_PARAMETER);
@@ -151,14 +209,17 @@ public class SecuredRemoteAddressFilter implements Filter {
 
     /**
      * <p>
-     * Comma delimited list of secured remote addresses. Expressed with regular expressions.
+     * Comma delimited list of secured remote addresses. Expressed with regular
+     * expressions.
      * </p>
      * <p>
-     * Default value : 10\.\d{1,3}\.\d{1,3}\.\d{1,3}, 192\.168\.\d{1,3}\.\d{1,3}, 172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3}, 
-     * 127\.\d{1,3}\.\d{1,3}\.\d{1,3}
+     * Default value : 10\.\d{1,3}\.\d{1,3}\.\d{1,3},
+     * 192\.168\.\d{1,3}\.\d{1,3},
+     * 172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3},
+     * 169\.254\.\d{1,3}\.\d{1,3}, 127\.\d{1,3}\.\d{1,3}\.\d{1,3}
      * </p>
      */
-    public void setSecuredRemoteAdresses(String comaDelimitedSecuredRemoteAddresses){
+    public void setSecuredRemoteAdresses(String comaDelimitedSecuredRemoteAddresses) {
         this.securedRemoteAddresses = commaDelimitedListToPatternArray(comaDelimitedSecuredRemoteAddresses);
 
     }
