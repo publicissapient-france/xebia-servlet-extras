@@ -109,6 +109,7 @@ public class XForwardedFilterTest {
         assertEquals("Camel Case", request.getHeader("myheader"));
     }
     
+    @Test
     public void testIncomingRequestIsSecuredButProtocolHeaderSaysItIsNot() throws Exception {
         // PREPARE
         XForwardedFilter xforwardedFilter = new XForwardedFilter();

@@ -577,8 +577,10 @@ public class XForwardedFilter implements Filter {
      */
     private static final Pattern commaSeparatedValuesPattern = Pattern.compile("\\s*,\\s*");
     
+    protected static final String HTTP_SERVER_PORT_PARAMETER = "httpServerPort";
+
     protected static final String HTTPS_SERVER_PORT_PARAMETER = "httpsServerPort";
-    
+
     protected static final String INTERNAL_PROXIES_PARAMETER = "allowedInternalProxies";
     
     /**
@@ -657,10 +659,15 @@ public class XForwardedFilter implements Filter {
     }
     
     /**
+     * @see #setHttpServerPort(int)
+     */
+    private int httpServerPort = 80;
+
+    /**
      * @see #setHttpsServerPort(int)
      */
     private int httpsServerPort = 443;
-    
+
     /**
      * @see #setInternalProxies(String)
      */
@@ -744,11 +751,21 @@ public class XForwardedFilter implements Filter {
             
             if (protocolHeader != null) {
                 String protocolHeaderValue = request.getHeader(protocolHeader);
+                boolean secure;
+                String scheme;
+                int serverPort;
                 if (protocolHeaderValue != null && protocolHeaderSslValue.equalsIgnoreCase(protocolHeaderValue)) {
-                    xRequest.setSecure(true);
-                    xRequest.setScheme("https");
-                    xRequest.setServerPort(httpsServerPort);
+                    secure = true;
+                    scheme = "https";
+                    serverPort = httpsServerPort;
+                } else {
+                    secure = false;
+                    scheme = "http";
+                    serverPort = httpServerPort;
                 }
+                xRequest.setSecure(secure);
+                xRequest.setScheme(scheme);
+                xRequest.setServerPort(serverPort);
             }
             
             if (logger.isDebugEnabled()) {
@@ -856,6 +873,18 @@ public class XForwardedFilter implements Filter {
     
     /**
      * <p>
+     * Server Port value if the {@link #protocolHeader} does not indicate HTTPS
+     * </p>
+     * <p>
+     * Default value : 80
+     * </p>
+     */
+    public void setHttpServerPort(int httpServerPort) {
+        this.httpServerPort = httpServerPort;
+    }
+
+    /**
+     * <p>
      * Server Port value if the {@link #protocolHeader} indicates HTTPS
      * </p>
      * <p>
@@ -865,7 +894,7 @@ public class XForwardedFilter implements Filter {
     public void setHttpsServerPort(int httpsServerPort) {
         this.httpsServerPort = httpsServerPort;
     }
-    
+
     /**
      * <p>
      * Header that holds the incoming protocol, usally named <code>X-Forwarded-Proto</code>. If <code>null</code>, request.scheme and
