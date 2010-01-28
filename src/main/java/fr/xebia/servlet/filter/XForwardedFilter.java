@@ -751,21 +751,18 @@ public class XForwardedFilter implements Filter {
             
             if (protocolHeader != null) {
                 String protocolHeaderValue = request.getHeader(protocolHeader);
-                boolean secure;
-                String scheme;
-                int serverPort;
-                if (protocolHeaderValue != null && protocolHeaderSslValue.equalsIgnoreCase(protocolHeaderValue)) {
-                    secure = true;
-                    scheme = "https";
-                    serverPort = httpsServerPort;
+                if (protocolHeaderValue == null) {
+                    // don't modify the secure,scheme and serverPort attributes of the request
+                } else if (protocolHeaderSslValue.equalsIgnoreCase(protocolHeaderValue)) {
+                    xRequest.setSecure(true);
+                    xRequest.setScheme("https");
+                    xRequest.setServerPort(httpsServerPort);
                 } else {
-                    secure = false;
-                    scheme = "http";
-                    serverPort = httpServerPort;
+                    xRequest.setSecure(false);
+                    xRequest.setScheme("http");
+                    xRequest.setServerPort(httpServerPort);
                 }
-                xRequest.setSecure(secure);
-                xRequest.setScheme(scheme);
-                xRequest.setServerPort(serverPort);
+
             }
             
             if (logger.isDebugEnabled()) {
