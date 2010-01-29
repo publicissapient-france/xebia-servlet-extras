@@ -236,7 +236,7 @@ public class ExpiresFilter implements Filter {
                 } else if (value instanceof String) {
                     super.addHeader(name, (String) value);
                 } else {
-                    throw new IllegalStateException("unsupported value type " + header.getValue());
+                    throw new IllegalStateException("Unsupported value type " + header.getValue());
                 }
             }
             headers = Collections.emptyList();
@@ -681,7 +681,17 @@ public class ExpiresFilter implements Filter {
 
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
         if (request instanceof HttpServletRequest && response instanceof HttpServletResponse) {
-            chain.doFilter(request, new XHttpServletResponse((HttpServletRequest) request, (HttpServletResponse) response));
+            HttpServletRequest httpRequest = (HttpServletRequest) request;
+            HttpServletResponse httpResponse = (HttpServletResponse) response;
+
+            if (response.isCommitted()) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Can not apply ExpiresFilter on already committed response for request " + httpRequest.getRequestURL());
+                }
+                chain.doFilter(request, response);
+            } else {
+                chain.doFilter(request, new XHttpServletResponse(httpRequest, httpResponse));
+            }
         } else {
             chain.doFilter(request, response);
         }
