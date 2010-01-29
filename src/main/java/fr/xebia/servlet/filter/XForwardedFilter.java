@@ -825,32 +825,40 @@ public class XForwardedFilter implements Filter {
         if (filterConfig.getInitParameter(INTERNAL_PROXIES_PARAMETER) != null) {
             setAllowedInternalProxies(filterConfig.getInitParameter(INTERNAL_PROXIES_PARAMETER));
         }
-        
+
         if (filterConfig.getInitParameter(PROTOCOL_HEADER_PARAMETER) != null) {
             setProtocolHeader(filterConfig.getInitParameter(PROTOCOL_HEADER_PARAMETER));
         }
-        
+
         if (filterConfig.getInitParameter(PROTOCOL_HEADER_SSL_VALUE_PARAMETER) != null) {
             setProtocolHeaderSslValue(filterConfig.getInitParameter(PROTOCOL_HEADER_SSL_VALUE_PARAMETER));
         }
-        
+
         if (filterConfig.getInitParameter(PROXIES_HEADER_PARAMETER) != null) {
             setProxiesHeader(filterConfig.getInitParameter(PROXIES_HEADER_PARAMETER));
         }
-        
+
         if (filterConfig.getInitParameter(REMOTE_IP_HEADER_PARAMETER) != null) {
             setRemoteIPHeader(filterConfig.getInitParameter(REMOTE_IP_HEADER_PARAMETER));
         }
-        
+
         if (filterConfig.getInitParameter(TRUSTED_PROXIES_PARAMETER) != null) {
             setTrustedProxies(filterConfig.getInitParameter(TRUSTED_PROXIES_PARAMETER));
         }
-        
+
+        if (filterConfig.getInitParameter(HTTP_SERVER_PORT_PARAMETER) != null) {
+            try {
+                setHttpServerPort(Integer.parseInt(filterConfig.getInitParameter(HTTP_SERVER_PORT_PARAMETER)));
+            } catch (NumberFormatException e) {
+                throw new NumberFormatException("Illegal " + HTTP_SERVER_PORT_PARAMETER + " : " + e.getMessage());
+            }
+        }
+
         if (filterConfig.getInitParameter(HTTPS_SERVER_PORT_PARAMETER) != null) {
             try {
                 setHttpsServerPort(Integer.parseInt(filterConfig.getInitParameter(HTTPS_SERVER_PORT_PARAMETER)));
             } catch (NumberFormatException e) {
-                throw new NumberFormatException("Illegal serverPort : " + e.getMessage());
+                throw new NumberFormatException("Illegal " + HTTPS_SERVER_PORT_PARAMETER + " : " + e.getMessage());
             }
         }
     }
