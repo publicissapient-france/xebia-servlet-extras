@@ -49,25 +49,15 @@
       <extensions>
          <extension>
             <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-scm</artifactId>
+            <artifactId>wagon-webdav-jackrabbit</artifactId>
             <version>1.0-beta-6</version>
-         </extension>
-         <extension>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-manager-plexus</artifactId>
-            <version>1.2</version>
-         </extension>
-         <extension>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-svnexe</artifactId>
-            <version>1.2</version>
          </extension>
       </extensions>
    </build>
    <distributionManagement>
       <repository>
          <id>xebia-france.googlecode.com</id>
-         <url>scm:svn:https://xebia-france.googlecode.com/svn/repository/maven2/</url>
+         <url>dav:https://xebia-france.googlecode.com/svn/repository/maven2/</url>
       </repository>
    </distributionManagement>
    <dependencies>
