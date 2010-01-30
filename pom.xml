@@ -1,4 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
    <modelVersion>4.0.0</modelVersion>
    <name>xebia-tomcat-extras</name>
    <groupId>fr.xebia.web.extras</groupId>
@@ -49,25 +50,15 @@
       <extensions>
          <extension>
             <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-scm</artifactId>
+            <artifactId>wagon-webdav-jackrabbit</artifactId>
             <version>1.0-beta-6</version>
-         </extension>
-         <extension>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-manager-plexus</artifactId>
-            <version>1.3</version>
-         </extension>
-         <extension>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-svnexe</artifactId>
-            <version>1.2</version>
          </extension>
       </extensions>
    </build>
    <distributionManagement>
       <repository>
          <id>xebia-france.googlecode.com</id>
-         <url>scm:svn:https://xebia-france.googlecode.com/svn/repository/maven2/</url>
+         <url>dav:https://xebia-france.googlecode.com/svn/repository/maven2/</url>
       </repository>
    </distributionManagement>
    <dependencies>
