@@ -140,6 +140,20 @@ import org.slf4j.LoggerFactory;
  * <td><code>https</code></td>
  * </tr>
  * <tr>
+ * <tr>
+ * <td>httpServerPort</td>
+ * <td>Value returned by {@link ServletRequest#getServerPort()} when the <code>protocolHeader</code> indicates <code>http</code> protocol</td>
+ * <td>N/A</td>
+ * <td>integer</td>
+ * <td>80</td>
+ * </tr>
+ * <tr>
+ * <td>httpsServerPort</td>
+ * <td>Value returned by {@link ServletRequest#getServerPort()} when the <code>protocolHeader</code> indicates <code>https</code> protocol</td>
+ * <td>N/A</td>
+ * <td>integer</td>
+ * <td>443</td>
+ * </tr>
  * </table>
  * </p>
  * <p>
