@@ -42,6 +42,7 @@ import org.springframework.mock.web.MockFilterConfig;
 import org.springframework.util.StringUtils;
 
 import fr.xebia.servlet.filter.ExpiresFilter.Duration;
+import fr.xebia.servlet.filter.ExpiresFilter.DurationUnit;
 import fr.xebia.servlet.filter.ExpiresFilter.ExpiresConfiguration;
 import fr.xebia.servlet.filter.ExpiresFilter.StartingPoint;
 
@@ -133,7 +134,6 @@ public class ExpiresFilterTest {
         validate(servlet, expectedMaxAgeInSeconds);
     }
 
-    
     @Test
     public void testUseContentTypeWithoutCharsetExpiresConfiguration() throws Exception {
         HttpServlet servlet = new HttpServlet() {
@@ -166,6 +166,33 @@ public class ExpiresFilterTest {
         int expectedMaxAgeInSeconds = 3 * 60;
 
         validate(servlet, expectedMaxAgeInSeconds);
+    }
+
+    @Test
+    public void testParseExpiresConfigurationMonoDuration() {
+        ExpiresFilter expiresFilter = new ExpiresFilter();
+        ExpiresConfiguration actualConfiguration = expiresFilter
+                .parseExpiresConfiguration("text/html \"access plus 2 hours\"");
+
+        Assert.assertEquals("text/html", actualConfiguration.getContentType());
+        Assert.assertEquals(StartingPoint.ACCESS_TIME, actualConfiguration.getStartingPoint());
+
+        Assert.assertEquals(1, actualConfiguration.getDurations().size());
+        Assert.assertEquals(2, actualConfiguration.getDurations().get(0).getAmount());
+        Assert.assertEquals(DurationUnit.HOUR, actualConfiguration.getDurations().get(0).getUnit());
+
+    }
+    @Test
+    public void testParseExpiresConfigurationCombinedDuration() {
+        ExpiresFilter expiresFilter = new ExpiresFilter();
+        ExpiresConfiguration actualConfiguration = expiresFilter
+                .parseExpiresConfiguration("text/html \"access plus 1 month 15 days 2 hours\"");
+
+        Assert.assertEquals("text/html", actualConfiguration.getContentType());
+        Assert.assertEquals(StartingPoint.ACCESS_TIME, actualConfiguration.getStartingPoint());
+
+        Assert.assertEquals(3, actualConfiguration.getDurations().size());
+
     }
 
     protected void validate(HttpServlet servlet, Integer expectedMaxAgeInSeconds) throws ServletException, Exception, IOException,

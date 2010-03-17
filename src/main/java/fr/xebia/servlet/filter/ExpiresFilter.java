@@ -26,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.StringTokenizer;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -74,9 +76,9 @@ public class ExpiresFilter implements Filter {
 
         final protected DurationUnit unit;
 
-        public Duration(int amout, DurationUnit unit) {
+        public Duration(int amount, DurationUnit unit) {
             super();
-            this.amount = amout;
+            this.amount = amount;
             this.unit = unit;
         }
 
@@ -95,8 +97,8 @@ public class ExpiresFilter implements Filter {
     }
 
     protected enum DurationUnit {
-        DAY(Calendar.DAY_OF_YEAR), MINUTE(Calendar.MINUTE), MONTH(Calendar.MONTH), SECOND(Calendar.SECOND), WEEK(Calendar.WEEK_OF_YEAR), YEAR(
-                Calendar.YEAR);
+        DAY(Calendar.DAY_OF_YEAR), MINUTE(Calendar.MINUTE), HOUR(Calendar.HOUR), MONTH(Calendar.MONTH), SECOND(Calendar.SECOND), WEEK(
+                Calendar.WEEK_OF_YEAR), YEAR(Calendar.YEAR);
         private final int calendardField;
 
         private DurationUnit(int calendardField) {
@@ -111,6 +113,10 @@ public class ExpiresFilter implements Filter {
 
     protected static class ExpiresConfiguration {
         private String contentType;
+
+        public String getContentType() {
+            return contentType;
+        }
 
         private List<Duration> durations;
 
@@ -762,6 +768,109 @@ public class ExpiresFilter implements Filter {
     public void init(FilterConfig filterConfig) throws ServletException {
         // TODO : load configuration
 
+    }
+
+    /**
+     * "access plus 1 month 15 days 2 hours"
+     * "access plus 1 month 15 days 2 hours"
+     * 
+     * @param line
+     * @return
+     */
+    protected ExpiresConfiguration parseExpiresConfiguration(String line) {
+        line = line.trim();
+
+        // TODO REMOVE
+        System.err.println("TODO fix quote removal");
+        line = line.replace("\"", "");
+
+        StringTokenizer tokenizer = new StringTokenizer(line, " ");
+
+        String currentToken;
+
+        String contentType;
+        try {
+            contentType = tokenizer.nextToken();
+        } catch (NoSuchElementException e) {
+            throw new IllegalStateException("Content-Type not found in directive '" + line + "'");
+        }
+
+        try {
+            currentToken = tokenizer.nextToken();
+        } catch (NoSuchElementException e) {
+            throw new IllegalStateException("Starting point (access|now|modification) not found in directive '" + line + "'");
+        }
+        StartingPoint startingPoint;
+        if ("access".equalsIgnoreCase(currentToken) || "now".equalsIgnoreCase(currentToken)) {
+            startingPoint = StartingPoint.ACCESS_TIME;
+        } else if ("modification".equalsIgnoreCase(currentToken)) {
+            startingPoint = StartingPoint.LAST_MODIFICATION_TIME;
+        } else {
+            throw new IllegalStateException("Invalid starting point (access|now|modification) '" + currentToken + "' in directive '" + line
+                    + "'");
+        }
+
+        try {
+            currentToken = tokenizer.nextToken();
+        } catch (NoSuchElementException e) {
+            throw new IllegalStateException("Duration not found in directive '" + line + "'");
+        }
+
+        if ("plus".equalsIgnoreCase(currentToken)) {
+            // skip
+            try {
+                currentToken = tokenizer.nextToken();
+            } catch (NoSuchElementException e) {
+                throw new IllegalStateException("Duration not found in directive '" + line + "'");
+            }
+        }
+
+        List<Duration> durations = new ArrayList<Duration>();
+
+        while (currentToken != null) {
+            int amount;
+            try {
+                amount = Integer.parseInt(currentToken);
+            } catch (NumberFormatException e) {
+                throw new IllegalStateException("Invalid duration (number) '" + currentToken + "' in directive '" + line + "'");
+            }
+
+            try {
+                currentToken = tokenizer.nextToken();
+            } catch (NoSuchElementException e) {
+                throw new IllegalStateException("Duration unit not found after amount " + amount + " in directive '" + line + "'");
+            }
+            DurationUnit durationUnit;
+            if ("years".equalsIgnoreCase(currentToken)) {
+                durationUnit = DurationUnit.YEAR;
+            } else if ("month".equalsIgnoreCase(currentToken) || "months".equalsIgnoreCase(currentToken)) {
+                durationUnit = DurationUnit.MONTH;
+            } else if ("week".equalsIgnoreCase(currentToken) || "weeks".equalsIgnoreCase(currentToken)) {
+                durationUnit = DurationUnit.WEEK;
+            } else if ("day".equalsIgnoreCase(currentToken) || "days".equalsIgnoreCase(currentToken)) {
+                durationUnit = DurationUnit.DAY;
+            } else if ("hour".equalsIgnoreCase(currentToken) || "hours".equalsIgnoreCase(currentToken)) {
+                durationUnit = DurationUnit.HOUR;
+            } else if ("minute".equalsIgnoreCase(currentToken) || "minutes".equalsIgnoreCase(currentToken)) {
+                durationUnit = DurationUnit.MINUTE;
+            } else if ("second".equalsIgnoreCase(currentToken) || "seconds".equalsIgnoreCase(currentToken)) {
+                durationUnit = DurationUnit.SECOND;
+            } else {
+                throw new IllegalStateException("Invalid duration unit (years|months|weeks|days|hours|minutes|seconds) '" + currentToken
+                        + "' in directive '" + line + "'");
+            }
+
+            Duration duration = new Duration(amount, durationUnit);
+            durations.add(duration);
+
+            if (tokenizer.hasMoreTokens()) {
+                currentToken = tokenizer.nextToken();
+            } else {
+                currentToken = null;
+            }
+        }
+
+        return new ExpiresConfiguration(contentType, startingPoint, durations);
     }
 
     /**
