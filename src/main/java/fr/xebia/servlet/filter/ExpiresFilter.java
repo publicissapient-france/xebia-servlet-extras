@@ -18,10 +18,11 @@ package fr.xebia.servlet.filter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -61,47 +62,67 @@ public class ExpiresFilter implements Filter {
 
     protected static class Duration {
 
-        public DurationUnit getUnit() {
-            return unit;
+        public static Duration minutes(int amount) {
+            return new Duration(amount, DurationUnit.MINUTE);
         }
 
-        final protected int amout;
+        public static Duration seconds(int amount) {
+            return new Duration(amount, DurationUnit.SECOND);
+        }
+
+        final protected int amount;
 
         final protected DurationUnit unit;
 
         public Duration(int amout, DurationUnit unit) {
             super();
-            this.amout = amout;
+            this.amount = amout;
             this.unit = unit;
         }
 
-        public int getAmout() {
-            return amout;
+        public int getAmount() {
+            return amount;
+        }
+
+        public DurationUnit getUnit() {
+            return unit;
+        }
+
+        @Override
+        public String toString() {
+            return amount + " " + unit;
         }
     }
 
     protected enum DurationUnit {
         DAY(Calendar.DAY_OF_YEAR), MINUTE(Calendar.MINUTE), MONTH(Calendar.MONTH), SECOND(Calendar.SECOND), WEEK(Calendar.WEEK_OF_YEAR), YEAR(
                 Calendar.YEAR);
-        public int getCalendardField() {
-            return calendardField;
-        }
-
         private final int calendardField;
 
         private DurationUnit(int calendardField) {
             this.calendardField = calendardField;
         }
 
+        public int getCalendardField() {
+            return calendardField;
+        }
+
     }
 
     protected static class ExpiresConfiguration {
+        private String contentType;
+
         private List<Duration> durations;
 
         private StartingPoint startingPoint;
 
-        private ExpiresConfiguration(StartingPoint startingPoint, List<Duration> durations) {
+        public ExpiresConfiguration(String contentType, StartingPoint startingPoint, Duration... durations) {
+            this(contentType, startingPoint, Arrays.asList(durations));
+        }
+
+        public ExpiresConfiguration(String contentType, StartingPoint startingPoint, List<Duration> durations) {
             super();
+            this.contentType = contentType;
             this.startingPoint = startingPoint;
             this.durations = durations;
         }
@@ -112,6 +133,11 @@ public class ExpiresFilter implements Filter {
 
         public StartingPoint getStartingPoint() {
             return startingPoint;
+        }
+
+        @Override
+        public String toString() {
+            return "ExpiresConfiguration[contentType=" + contentType + ", startingPoint=" + startingPoint + ", duration=" + durations + "]";
         }
     }
 
@@ -175,8 +201,6 @@ public class ExpiresFilter implements Filter {
 
         private List<Header> headers = new ArrayList<Header>();
 
-        private boolean headersAlreadyFlushed;
-
         private PrintWriter printWriter;
 
         private HttpServletRequest request;
@@ -190,71 +214,20 @@ public class ExpiresFilter implements Filter {
 
         @Override
         public void addDateHeader(String name, long date) {
-            if (headersAlreadyFlushed) {
-                super.addDateHeader(name, date);
-            } else {
-                headers.add(new Header(name, date));
-            }
+            super.addDateHeader(name, date);
+            headers.add(new Header(name, date));
         }
 
         @Override
         public void addHeader(String name, String value) {
-            if (headersAlreadyFlushed) {
-                super.addHeader(name, value);
-            } else {
-                headers.add(new Header(name, value));
-            }
+            super.addHeader(name, value);
+            headers.add(new Header(name, value));
         }
 
         @Override
         public void addIntHeader(String name, int value) {
-            if (headersAlreadyFlushed) {
-                super.addIntHeader(name, value);
-            } else {
-                headers.add(new Header(name, value));
-            }
-        }
-
-        @Override
-        public boolean containsHeader(String name) {
-            if (headersAlreadyFlushed) {
-                return super.containsHeader(name);
-            } else {
-                return getHeaderObject(name) != null;
-            }
-        }
-
-        protected void flushHeaders() {
-            for (Header header : headers) {
-                Object value = header.getValue();
-                String name = header.getName();
-                logger.trace("flush {}: {}", name, value);
-                if (value instanceof Integer) {
-                    super.addIntHeader(name, ((Integer) value).intValue());
-                } else if (value instanceof Long) {
-                    super.addDateHeader(name, ((Long) value).longValue());
-                } else if (value instanceof String) {
-                    super.addHeader(name, (String) value);
-                } else {
-                    throw new IllegalStateException("Unsupported value type " + header.getValue());
-                }
-            }
-            headers = Collections.emptyList();
-            headersAlreadyFlushed = true;
-        }
-
-        private Header getHeaderObject(String name) {
-            for (Header header : headers) {
-                if (header.getName().equalsIgnoreCase(name)) {
-                    return header;
-                }
-            }
-            return null;
-        }
-
-        protected String getStringHeader(String name) {
-            Header header = getHeaderObject(name);
-            return header == null ? null : header.getValue().toString();
+            super.addIntHeader(name, value);
+            headers.add(new Header(name, value));
         }
 
         protected Long getDateHeader(String name) {
@@ -268,12 +241,26 @@ public class ExpiresFilter implements Filter {
             }
         }
 
+        private Header getHeaderObject(String name) {
+            for (Header header : headers) {
+                if (header.getName().equalsIgnoreCase(name)) {
+                    return header;
+                }
+            }
+            return null;
+        }
+
         @Override
         public ServletOutputStream getOutputStream() throws IOException {
             if (servletOutputStream == null) {
                 servletOutputStream = new XServletOutputStream(super.getOutputStream(), request, this);
             }
             return servletOutputStream;
+        }
+
+        protected String getStringHeader(String name) {
+            Header header = getHeaderObject(name);
+            return header == null ? null : header.getValue().toString();
         }
 
         @Override
@@ -286,46 +273,36 @@ public class ExpiresFilter implements Filter {
 
         @Override
         public void setDateHeader(String name, long date) {
-            if (headersAlreadyFlushed) {
-                super.setDateHeader(name, date);
+            super.setDateHeader(name, date);
+            Header header = getHeaderObject(name);
+            if (header == null) {
+                headers.add(new Header(name, date));
             } else {
-                Header header = getHeaderObject(name);
-                if (header == null) {
-                    addDateHeader(name, date);
-                } else {
-                    header.setValue(date);
-                }
+                header.setValue(date);
             }
         }
 
         @Override
         public void setHeader(String name, String value) {
-            if (headersAlreadyFlushed) {
-                super.setHeader(name, value);
+            super.setHeader(name, value);
+            Header header = getHeaderObject(name);
+            if (header == null) {
+                headers.add(new Header(name, value));
             } else {
-                Header header = getHeaderObject(name);
-                if (header == null) {
-                    addHeader(name, value);
-                } else {
-                    header.setValue(value);
-                }
+                header.setValue(value);
             }
         }
 
         @Override
         public void setIntHeader(String name, int value) {
-            if (headersAlreadyFlushed) {
-                super.setIntHeader(name, value);
+            super.setIntHeader(name, value);
+            Header header = getHeaderObject(name);
+            if (header == null) {
+                headers.add(new Header(name, value));
             } else {
-                Header header = getHeaderObject(name);
-                if (header == null) {
-                    addIntHeader(name, value);
-                } else {
-                    header.setValue(value);
-                }
+                header.setValue(value);
             }
         }
-
     }
 
     /**
@@ -349,164 +326,164 @@ public class ExpiresFilter implements Filter {
         }
 
         public PrintWriter append(char c) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             return out.append(c);
         }
 
         public PrintWriter append(CharSequence csq) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             return out.append(csq);
         }
 
         public PrintWriter append(CharSequence csq, int start, int end) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             return out.append(csq, start, end);
         }
 
         public void close() {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.close();
         }
 
-        private void fireOnStartWriteResponseBodyEvent() {
+        private void fireBeforeWriteResponseBodyEvent() {
             if (!writeStarted) {
                 writeStarted = true;
-                onStartWriteResponseBody(request, response);
+                onBeforeWriteResponseBody(request, response);
             }
         }
 
         public void flush() {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.flush();
         }
 
         public void print(boolean b) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(b);
         }
 
         public void print(char c) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(c);
         }
 
         public void print(char[] s) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(s);
         }
 
         public void print(double d) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(d);
         }
 
         public void print(float f) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(f);
         }
 
         public void print(int i) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(i);
         }
 
         public void print(long l) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(l);
         }
 
         public void print(Object obj) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(obj);
         }
 
         public void print(String s) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.print(s);
         }
 
         public PrintWriter printf(Locale l, String format, Object... args) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             return out.printf(l, format, args);
         }
 
         public PrintWriter printf(String format, Object... args) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             return out.printf(format, args);
         }
 
         public void println() {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println();
         }
 
         public void println(boolean x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(char x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(char[] x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(double x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(float x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(int x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(long x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(Object x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void println(String x) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.println(x);
         }
 
         public void write(char[] buf) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.write(buf);
         }
 
         public void write(char[] buf, int off, int len) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.write(buf, off, len);
         }
 
         public void write(int c) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.write(c);
         }
 
         public void write(String s) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.write(s);
         }
 
         public void write(String s, int off, int len) {
-            fireOnStartWriteResponseBodyEvent();
+            fireBeforeWriteResponseBodyEvent();
             out.write(s, off, len);
         }
 
@@ -534,109 +511,109 @@ public class ExpiresFilter implements Filter {
         }
 
         public void close() throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.close();
         }
 
-        private void fireOnStartWriteResponseBodyEvent() {
+        private void fireOnBeforeWriteResponseBodyEvent() {
             if (!writeStarted) {
                 writeStarted = true;
-                onStartWriteResponseBody(request, response);
+                onBeforeWriteResponseBody(request, response);
             }
         }
 
         public void flush() throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.flush();
         }
 
         public void print(boolean b) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.print(b);
         }
 
         public void print(char c) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.print(c);
         }
 
         public void print(double d) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.print(d);
         }
 
         public void print(float f) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.print(f);
         }
 
         public void print(int i) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.print(i);
         }
 
         public void print(long l) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.print(l);
         }
 
         public void print(String s) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.print(s);
         }
 
         public void println() throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println();
         }
 
         public void println(boolean b) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println(b);
         }
 
         public void println(char c) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println(c);
         }
 
         public void println(double d) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println(d);
         }
 
         public void println(float f) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println(f);
         }
 
         public void println(int i) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println(i);
         }
 
         public void println(long l) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println(l);
         }
 
         public void println(String s) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.println(s);
         }
 
         public void write(byte[] b) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.write(b);
         }
 
         public void write(byte[] b, int off, int len) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.write(b, off, len);
         }
 
         public void write(int b) throws IOException {
-            fireOnStartWriteResponseBodyEvent();
+            fireOnBeforeWriteResponseBodyEvent();
             servletOutputStream.write(b);
         }
 
@@ -657,6 +634,22 @@ public class ExpiresFilter implements Filter {
         return str.indexOf(searchStr) >= 0;
     }
 
+    protected static String substringBefore(String str, String separator) {
+        if (str == null || str.isEmpty() || separator == null) {
+            return null;
+        }
+
+        if (separator.isEmpty()) {
+            return "";
+        }
+
+        int separatorIndex = str.indexOf(separator);
+        if (separatorIndex == -1) {
+            return str;
+        }
+        return str.substring(0, separatorIndex);
+    }
+
     /**
      * Returns <code>true</code> if the given <code>str</code> is
      * <code>null</code> or has a zero characters length.
@@ -672,6 +665,16 @@ public class ExpiresFilter implements Filter {
     protected static boolean isNotEmpty(String str) {
         return !isEmpty(str);
     }
+
+    /**
+     * Default Expires configuration. Visible for test.
+     */
+    protected ExpiresConfiguration defaultExpiresConfiguration;
+
+    /**
+     * Expires configuration by content type. Visible for test.
+     */
+    protected Map<String, ExpiresConfiguration> expiresConfigurationByContentType = new LinkedHashMap<String, ExpiresConfiguration>();
 
     private final Logger logger = LoggerFactory.getLogger(ExpiresFilter.class);
 
@@ -695,11 +698,7 @@ public class ExpiresFilter implements Filter {
         } else {
             chain.doFilter(request, response);
         }
-    };
-
-    private Map<String, ExpiresConfiguration> expiresConfigurationByContentType;
-
-    private ExpiresConfiguration defaultExpiresConfiguration;
+    }
 
     /**
      * Returns the expiration date of the given {@link XHttpServletResponse} or
@@ -709,12 +708,29 @@ public class ExpiresFilter implements Filter {
      * @see HttpServletResponse#getContentType()
      */
     private Date getExpirationDate(XHttpServletResponse response) {
-        ExpiresConfiguration configuration = expiresConfigurationByContentType.get(response.getContentType());
+        String contentType = response.getContentType();
+
+        // lookup exact content-type match (e.g.
+        // "text/html; charset=iso-8859-1")
+        ExpiresConfiguration configuration = expiresConfigurationByContentType.get(contentType);
+
+        if (configuration == null && contentType.contains(";")) {
+            // lookup content-type without charset match (e.g. "text/html")
+            String contentTypeWithoutCharset = substringBefore(contentType, ";").trim();
+            configuration = expiresConfigurationByContentType.get(contentTypeWithoutCharset);
+        }
+
+        if (configuration == null && contentType.contains("/")) {
+            // lookup content-type without charset match (e.g. "text/html")
+            String majorType = substringBefore(contentType, "/");
+            configuration = expiresConfigurationByContentType.get(majorType);
+        }
 
         if (configuration == null) {
             configuration = defaultExpiresConfiguration;
-            logger.trace("No Expires configuration found for content type {}, use default ", response.getContentType(), configuration);
         }
+        logger.trace("Use {} for content type {}", configuration, contentType);
+
         if (configuration == null) {
             return null;
         }
@@ -724,19 +740,20 @@ public class ExpiresFilter implements Filter {
             calendar = GregorianCalendar.getInstance();
             break;
         case LAST_MODIFICATION_TIME:
-            calendar = GregorianCalendar.getInstance();
             Long lastModified = response.getDateHeader("Last-Modified");
             if (lastModified == null) {
                 // Last-Modified header not found, use now
+                calendar = GregorianCalendar.getInstance();
             } else {
+                calendar = GregorianCalendar.getInstance();
                 calendar.setTimeInMillis(lastModified);
             }
             break;
         default:
-            throw new IllegalStateException();
+            throw new IllegalStateException("Unsupported startingPoint '" + configuration.getStartingPoint() + "'");
         }
         for (Duration duration : configuration.getDurations()) {
-            calendar.add(duration.getUnit().getCalendardField(), duration.getAmout());
+            calendar.add(duration.getUnit().getCalendardField(), duration.getAmount());
         }
 
         return calendar.getTime();
@@ -758,32 +775,26 @@ public class ExpiresFilter implements Filter {
      * Must be called on the "Start Write Response Body" event.
      * </p>
      */
-    public void onStartWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
+    public void onBeforeWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
         String cacheControlHeader = response.getStringHeader(HEADER_CACHE_CONTROL);
-        String expiresHeader = response.getStringHeader(HEADER_EXPIRES);
-        boolean expirationHeaderExists = isNotEmpty(expiresHeader) || contains(cacheControlHeader, "max-age");
-        if (expirationHeaderExists) {
+        boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
+        if (expirationHeaderHasBeenSet) {
             logger.debug("Expiration header already defined for request {}", request.getRequestURI());
         } else {
-            String contentType = response.getContentType();
             Date expirationDate = getExpirationDate(response);
             if (expirationDate == null) {
-                logger.debug("No expiration date configured for request {} content type '{}'", request.getRequestURI(), contentType);
+                logger.debug("No expiration date configured for request {} content type '{}'", request.getRequestURI(), response
+                        .getContentType());
             } else {
                 logger.info("Set expiration date {} for request {} contentType'{}'", new Object[] { expirationDate,
-                        request.getRequestURI(), contentType });
+                        request.getRequestURI(), response.getContentType() });
 
                 String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
-                if (isEmpty(cacheControlHeader)) {
-                    response.addHeader(HEADER_CACHE_CONTROL, maxAgeDirective);
-                } else {
-                    response.setHeader(HEADER_CACHE_CONTROL, cacheControlHeader + ", " + maxAgeDirective);
-                }
-                response.addDateHeader(HEADER_EXPIRES, expirationDate.getTime());
+
+                String newCacheControlHeader = (cacheControlHeader == null) ? maxAgeDirective : cacheControlHeader + ", " + maxAgeDirective;
+                response.setHeader(HEADER_CACHE_CONTROL, newCacheControlHeader);
+                response.setDateHeader(HEADER_EXPIRES, expirationDate.getTime());
             }
         }
-
-        // Flush headers
-        response.flushHeaders();
     }
 }
