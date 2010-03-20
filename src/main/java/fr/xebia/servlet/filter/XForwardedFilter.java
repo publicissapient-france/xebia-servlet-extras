@@ -791,6 +791,10 @@ public class XForwardedFilter implements Filter {
             }
             chain.doFilter(xRequest, response);
         } else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Skip XForwardedFilter for request " + request.getRequestURI() + " with remote address "
+                        + request.getRemoteAddr());
+            }
             chain.doFilter(request, response);
         }
         
