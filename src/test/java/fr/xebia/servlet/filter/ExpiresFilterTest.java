@@ -17,7 +17,6 @@ package fr.xebia.servlet.filter;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Calendar;
 import java.util.List;
@@ -171,8 +170,7 @@ public class ExpiresFilterTest {
     @Test
     public void testParseExpiresConfigurationMonoDuration() {
         ExpiresFilter expiresFilter = new ExpiresFilter();
-        ExpiresConfiguration actualConfiguration = expiresFilter
-                .parseExpiresConfiguration("text/html \"access plus 2 hours\"");
+        ExpiresConfiguration actualConfiguration = expiresFilter.parseExpiresConfiguration("text/html", "access plus 2 hours");
 
         Assert.assertEquals("text/html", actualConfiguration.getContentType());
         Assert.assertEquals(StartingPoint.ACCESS_TIME, actualConfiguration.getStartingPoint());
@@ -182,11 +180,71 @@ public class ExpiresFilterTest {
         Assert.assertEquals(DurationUnit.HOUR, actualConfiguration.getDurations().get(0).getUnit());
 
     }
+
+    @Test
+    public void testConfiguration() throws ServletException {
+        MockFilterConfig filterConfig = new MockFilterConfig();
+        filterConfig.addInitParameter("ExpiresDefault", "access plus 1 month");
+        filterConfig.addInitParameter("ExpiresByType text/html", "access plus 1 month 15 days 2 hours");
+        filterConfig.addInitParameter("ExpiresByType image/gif", "modification plus 5 hours 3 minutes");
+        filterConfig.addInitParameter("ExpiresActive", "Off");
+
+        ExpiresFilter expiresFilter = new ExpiresFilter();
+        expiresFilter.init(filterConfig);
+
+        Assert.assertEquals(false, expiresFilter.isActive());
+
+        // VERIFY DEFAULT CONFIGURATION
+        {
+            ExpiresConfiguration expiresConfiguration = expiresFilter.getDefaultExpiresConfiguration();
+            Assert.assertEquals(StartingPoint.ACCESS_TIME, expiresConfiguration.getStartingPoint());
+            Assert.assertEquals(1, expiresConfiguration.getDurations().size());
+            Assert.assertEquals(DurationUnit.MONTH, expiresConfiguration.getDurations().get(0).getUnit());
+            Assert.assertEquals(1, expiresConfiguration.getDurations().get(0).getAmount());
+        }
+
+        // VERIFY TEXT/HTML
+        {
+            ExpiresConfiguration expiresConfiguration = expiresFilter.getExpiresConfigurationByContentType().get("text/html");
+            Assert.assertEquals(StartingPoint.ACCESS_TIME, expiresConfiguration.getStartingPoint());
+
+            Assert.assertEquals(3, expiresConfiguration.getDurations().size());
+
+            Duration oneMonth = expiresConfiguration.getDurations().get(0);
+            Assert.assertEquals(DurationUnit.MONTH, oneMonth.getUnit());
+            Assert.assertEquals(1, oneMonth.getAmount());
+
+            Duration fifteenDays = expiresConfiguration.getDurations().get(1);
+            Assert.assertEquals(DurationUnit.DAY, fifteenDays.getUnit());
+            Assert.assertEquals(15, fifteenDays.getAmount());
+
+            Duration twoHours = expiresConfiguration.getDurations().get(2);
+            Assert.assertEquals(DurationUnit.HOUR, twoHours.getUnit());
+            Assert.assertEquals(2, twoHours.getAmount());
+        }
+        // VERIFY IMAGE/GIF
+        {
+            ExpiresConfiguration expiresConfiguration = expiresFilter.getExpiresConfigurationByContentType().get("image/gif");
+            Assert.assertEquals(StartingPoint.LAST_MODIFICATION_TIME, expiresConfiguration.getStartingPoint());
+
+            Assert.assertEquals(2, expiresConfiguration.getDurations().size());
+
+            Duration fiveHours = expiresConfiguration.getDurations().get(0);
+            Assert.assertEquals(DurationUnit.HOUR, fiveHours.getUnit());
+            Assert.assertEquals(5, fiveHours.getAmount());
+
+            Duration threeMinutes = expiresConfiguration.getDurations().get(1);
+            Assert.assertEquals(DurationUnit.MINUTE, threeMinutes.getUnit());
+            Assert.assertEquals(3, threeMinutes.getAmount());
+
+        }
+    }
+
     @Test
     public void testParseExpiresConfigurationCombinedDuration() {
         ExpiresFilter expiresFilter = new ExpiresFilter();
-        ExpiresConfiguration actualConfiguration = expiresFilter
-                .parseExpiresConfiguration("text/html \"access plus 1 month 15 days 2 hours\"");
+        ExpiresConfiguration actualConfiguration = expiresFilter.parseExpiresConfiguration("text/html",
+                "access plus 1 month 15 days 2 hours");
 
         Assert.assertEquals("text/html", actualConfiguration.getContentType());
         Assert.assertEquals(StartingPoint.ACCESS_TIME, actualConfiguration.getStartingPoint());
@@ -195,27 +253,21 @@ public class ExpiresFilterTest {
 
     }
 
-    protected void validate(HttpServlet servlet, Integer expectedMaxAgeInSeconds) throws ServletException, Exception, IOException,
-            MalformedURLException {
+    protected void validate(HttpServlet servlet, Integer expectedMaxAgeInSeconds) throws Exception {
         // SETUP
         int port = 6666;
         Server server = new Server(port);
         Context context = new Context(server, "/", Context.SESSIONS);
 
-        ExpiresFilter expiresFilter = new ExpiresFilter();
-        expiresFilter.defaultExpiresConfiguration = new ExpiresConfiguration("#DEFAULT#", StartingPoint.ACCESS_TIME, Duration.minutes(1));
-
-        expiresFilter.expiresConfigurationByContentType.put("text/xml; charset=utf-8", new ExpiresConfiguration("text/xml; charset=utf-8",
-                StartingPoint.ACCESS_TIME, Duration.minutes(3)));
-
-        expiresFilter.expiresConfigurationByContentType.put("text/xml", new ExpiresConfiguration("text/xml", StartingPoint.ACCESS_TIME,
-                Duration.minutes(5)));
-
-        expiresFilter.expiresConfigurationByContentType.put("text", new ExpiresConfiguration("text/xml", StartingPoint.ACCESS_TIME,
-                Duration.minutes(7)));
-
         MockFilterConfig filterConfig = new MockFilterConfig();
+        filterConfig.addInitParameter("ExpiresDefault", "access plus 1 minute");
+        filterConfig.addInitParameter("ExpiresByType text/xml; charset=utf-8", "access plus 3 minutes");
+        filterConfig.addInitParameter("ExpiresByType text/xml", "access plus 5 minutes");
+        filterConfig.addInitParameter("ExpiresByType text", "access plus 7 minutes");
+
+        ExpiresFilter expiresFilter = new ExpiresFilter();
         expiresFilter.init(filterConfig);
+
         context.addFilter(new FilterHolder(expiresFilter), "/*", Handler.REQUEST);
 
         context.addServlet(new ServletHolder(servlet), "/test");

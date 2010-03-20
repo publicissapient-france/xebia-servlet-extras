@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.GregorianCalendar;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,6 +63,12 @@ import org.slf4j.LoggerFactory;
  */
 public class ExpiresFilter implements Filter {
 
+    private static final String PARAMETER_EXPIRES_ACTIVE = "ExpiresActive";
+
+    private static final String PARAMETER_EXPIRES_DEFAULT = "ExpiresDefault";
+
+    private static final String PARAMETER_EXPIRES_BY_TYPE = "ExpiresByType";
+
     protected static class Duration {
 
         public static Duration minutes(int amount) {
@@ -97,7 +104,7 @@ public class ExpiresFilter implements Filter {
     }
 
     protected enum DurationUnit {
-        DAY(Calendar.DAY_OF_YEAR), MINUTE(Calendar.MINUTE), HOUR(Calendar.HOUR), MONTH(Calendar.MONTH), SECOND(Calendar.SECOND), WEEK(
+        DAY(Calendar.DAY_OF_YEAR), HOUR(Calendar.HOUR), MINUTE(Calendar.MINUTE), MONTH(Calendar.MONTH), SECOND(Calendar.SECOND), WEEK(
                 Calendar.WEEK_OF_YEAR), YEAR(Calendar.YEAR);
         private final int calendardField;
 
@@ -114,10 +121,6 @@ public class ExpiresFilter implements Filter {
     protected static class ExpiresConfiguration {
         private String contentType;
 
-        public String getContentType() {
-            return contentType;
-        }
-
         private List<Duration> durations;
 
         private StartingPoint startingPoint;
@@ -131,6 +134,10 @@ public class ExpiresFilter implements Filter {
             this.contentType = contentType;
             this.startingPoint = startingPoint;
             this.durations = durations;
+        }
+
+        public String getContentType() {
+            return contentType;
         }
 
         public List<Duration> getDurations() {
@@ -629,6 +636,8 @@ public class ExpiresFilter implements Filter {
 
     private static final String HEADER_EXPIRES = "Expires";
 
+    private static final Logger logger = LoggerFactory.getLogger(ExpiresFilter.class);
+
     /**
      * Returns <code>true</code> if the given <code>str</code> contains the
      * given <code>searchStr</code>.
@@ -638,22 +647,6 @@ public class ExpiresFilter implements Filter {
             return false;
         }
         return str.indexOf(searchStr) >= 0;
-    }
-
-    protected static String substringBefore(String str, String separator) {
-        if (str == null || str.isEmpty() || separator == null) {
-            return null;
-        }
-
-        if (separator.isEmpty()) {
-            return "";
-        }
-
-        int separatorIndex = str.indexOf(separator);
-        if (separatorIndex == -1) {
-            return str;
-        }
-        return str.substring(0, separatorIndex);
     }
 
     /**
@@ -672,17 +665,33 @@ public class ExpiresFilter implements Filter {
         return !isEmpty(str);
     }
 
+    protected static String substringBefore(String str, String separator) {
+        if (str == null || str.isEmpty() || separator == null) {
+            return null;
+        }
+
+        if (separator.isEmpty()) {
+            return "";
+        }
+
+        int separatorIndex = str.indexOf(separator);
+        if (separatorIndex == -1) {
+            return str;
+        }
+        return str.substring(0, separatorIndex);
+    }
+
+    private boolean active = true;
+
     /**
-     * Default Expires configuration. Visible for test.
+     * Default Expires configuration.
      */
-    protected ExpiresConfiguration defaultExpiresConfiguration;
+    private ExpiresConfiguration defaultExpiresConfiguration;
 
     /**
      * Expires configuration by content type. Visible for test.
      */
-    protected Map<String, ExpiresConfiguration> expiresConfigurationByContentType = new LinkedHashMap<String, ExpiresConfiguration>();
-
-    private final Logger logger = LoggerFactory.getLogger(ExpiresFilter.class);
+    private Map<String, ExpiresConfiguration> expiresConfigurationByContentType = new LinkedHashMap<String, ExpiresConfiguration>();
 
     public void destroy() {
 
@@ -698,12 +707,21 @@ public class ExpiresFilter implements Filter {
                     logger.debug("Can not apply ExpiresFilter on already committed response for request " + httpRequest.getRequestURL());
                 }
                 chain.doFilter(request, response);
-            } else {
+            } else if(active){
                 chain.doFilter(request, new XHttpServletResponse(httpRequest, httpResponse));
+            } else {
+                if (logger.isDebugEnabled()) {
+                    logger.debug("ExpiresFilter is NOT active for request " + httpRequest.getRequestURL());
+                }
+                chain.doFilter(request, response);
             }
         } else {
             chain.doFilter(request, response);
         }
+    }
+
+    public ExpiresConfiguration getDefaultExpiresConfiguration() {
+        return defaultExpiresConfiguration;
     }
 
     /**
@@ -765,9 +783,67 @@ public class ExpiresFilter implements Filter {
         return calendar.getTime();
     }
 
-    public void init(FilterConfig filterConfig) throws ServletException {
-        // TODO : load configuration
+    public Map<String, ExpiresConfiguration> getExpiresConfigurationByContentType() {
+        return expiresConfigurationByContentType;
+    }
 
+    @SuppressWarnings("unchecked")
+    public void init(FilterConfig filterConfig) throws ServletException {
+        for (Enumeration<String> names = filterConfig.getInitParameterNames(); names.hasMoreElements();) {
+            String name = names.nextElement();
+            String value = filterConfig.getInitParameter(name);
+
+            if (name.startsWith(PARAMETER_EXPIRES_BY_TYPE)) {
+                String contentType = name.substring(PARAMETER_EXPIRES_BY_TYPE.length()).trim();
+                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(contentType, value);
+                this.expiresConfigurationByContentType.put(contentType, expiresConfiguration);
+            } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_DEFAULT)) {
+                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(null, value);
+                this.defaultExpiresConfiguration = expiresConfiguration;
+            } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_ACTIVE)) {
+                active = "On".equalsIgnoreCase(value);
+            } else {
+                logger.warn("Uknown parameter '" + name + "' with value '" + value + "' is ignored !");
+            }
+        }
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    /**
+     * <p>
+     * If no expiration header has been set by the servlet and an expiration has
+     * been defined in the {@link ExpiresFilter} configuration, sets the
+     * "Expires header" and the attribute "max-age" of the "Cache-Control"
+     * header.
+     * </p>
+     * <p>
+     * Must be called on the "Start Write Response Body" event.
+     * </p>
+     */
+    public void onBeforeWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
+        String cacheControlHeader = response.getStringHeader(HEADER_CACHE_CONTROL);
+        boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
+        if (expirationHeaderHasBeenSet) {
+            logger.debug("Expiration header already defined for request {}", request.getRequestURI());
+        } else {
+            Date expirationDate = getExpirationDate(response);
+            if (expirationDate == null) {
+                logger.debug("No expiration date configured for request {} content type '{}'", request.getRequestURI(), response
+                        .getContentType());
+            } else {
+                logger.info("Set expiration date {} for request {} contentType'{}'", new Object[] { expirationDate,
+                        request.getRequestURI(), response.getContentType() });
+
+                String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
+
+                String newCacheControlHeader = (cacheControlHeader == null) ? maxAgeDirective : cacheControlHeader + ", " + maxAgeDirective;
+                response.setHeader(HEADER_CACHE_CONTROL, newCacheControlHeader);
+                response.setDateHeader(HEADER_EXPIRES, expirationDate.getTime());
+            }
+        }
     }
 
     /**
@@ -777,23 +853,12 @@ public class ExpiresFilter implements Filter {
      * @param line
      * @return
      */
-    protected ExpiresConfiguration parseExpiresConfiguration(String line) {
+    protected ExpiresConfiguration parseExpiresConfiguration(String contentType, String line) {
         line = line.trim();
-
-        // TODO REMOVE
-        System.err.println("TODO fix quote removal");
-        line = line.replace("\"", "");
 
         StringTokenizer tokenizer = new StringTokenizer(line, " ");
 
         String currentToken;
-
-        String contentType;
-        try {
-            contentType = tokenizer.nextToken();
-        } catch (NoSuchElementException e) {
-            throw new IllegalStateException("Content-Type not found in directive '" + line + "'");
-        }
 
         try {
             currentToken = tokenizer.nextToken();
@@ -873,37 +938,15 @@ public class ExpiresFilter implements Filter {
         return new ExpiresConfiguration(contentType, startingPoint, durations);
     }
 
-    /**
-     * <p>
-     * If no expiration header has been set by the servlet and an expiration has
-     * been defined in the {@link ExpiresFilter} configuration, sets the
-     * "Expires header" and the attribute "max-age" of the "Cache-Control"
-     * header.
-     * </p>
-     * <p>
-     * Must be called on the "Start Write Response Body" event.
-     * </p>
-     */
-    public void onBeforeWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
-        String cacheControlHeader = response.getStringHeader(HEADER_CACHE_CONTROL);
-        boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
-        if (expirationHeaderHasBeenSet) {
-            logger.debug("Expiration header already defined for request {}", request.getRequestURI());
-        } else {
-            Date expirationDate = getExpirationDate(response);
-            if (expirationDate == null) {
-                logger.debug("No expiration date configured for request {} content type '{}'", request.getRequestURI(), response
-                        .getContentType());
-            } else {
-                logger.info("Set expiration date {} for request {} contentType'{}'", new Object[] { expirationDate,
-                        request.getRequestURI(), response.getContentType() });
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 
-                String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
+    public void setDefaultExpiresConfiguration(ExpiresConfiguration defaultExpiresConfiguration) {
+        this.defaultExpiresConfiguration = defaultExpiresConfiguration;
+    }
 
-                String newCacheControlHeader = (cacheControlHeader == null) ? maxAgeDirective : cacheControlHeader + ", " + maxAgeDirective;
-                response.setHeader(HEADER_CACHE_CONTROL, newCacheControlHeader);
-                response.setDateHeader(HEADER_EXPIRES, expirationDate.getTime());
-            }
-        }
+    public void setExpiresConfigurationByContentType(Map<String, ExpiresConfiguration> expiresConfigurationByContentType) {
+        this.expiresConfigurationByContentType = expiresConfigurationByContentType;
     }
 }
