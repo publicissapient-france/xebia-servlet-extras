@@ -48,140 +48,6 @@ import fr.xebia.servlet.filter.ExpiresFilter.StartingPoint;
 public class ExpiresFilterTest {
 
     @Test
-    public void testUseDefaultConfiguration1() throws Exception {
-        HttpServlet servlet = new HttpServlet() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-                response.setContentType("image/jpeg");
-                response.getWriter().print("Hello world");
-            }
-        };
-
-        int expectedMaxAgeInSeconds = 1 * 60;
-
-        validate(servlet, expectedMaxAgeInSeconds);
-    }
-
-    @Test
-    public void testUseDefaultConfiguration2() throws Exception {
-        HttpServlet servlet = new HttpServlet() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-                response.setContentType("image/jpeg");
-                response.addHeader("Cache-Control", "private");
-
-                response.getWriter().print("Hello world");
-            }
-        };
-
-        int expectedMaxAgeInSeconds = 1 * 60;
-
-        validate(servlet, expectedMaxAgeInSeconds);
-    }
-
-    @Test
-    public void testSkipBecauseExpiresIsDefined() throws Exception {
-        HttpServlet servlet = new HttpServlet() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-                response.setContentType("text/xml; charset=utf-8");
-                response.addDateHeader("Expires", System.currentTimeMillis());
-                response.getWriter().print("Hello world");
-            }
-        };
-
-        validate(servlet, null);
-    }
-
-    @Test
-    public void testSkipBecauseCacheControlMaxAgeIsDefined() throws Exception {
-        HttpServlet servlet = new HttpServlet() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-                response.setContentType("text/xml; charset=utf-8");
-                response.addHeader("Cache-Control", "private, max-age=232");
-                response.getWriter().print("Hello world");
-            }
-        };
-
-        int expectedMaxAgeInSeconds = 232;
-        validate(servlet, expectedMaxAgeInSeconds);
-    }
-
-    @Test
-    public void testUseMajorTypeExpiresConfiguration() throws Exception {
-        HttpServlet servlet = new HttpServlet() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-                response.setContentType("text/json; charset=iso-8859-1");
-                response.getWriter().print("Hello world");
-            }
-        };
-
-        int expectedMaxAgeInSeconds = 7 * 60;
-
-        validate(servlet, expectedMaxAgeInSeconds);
-    }
-
-    @Test
-    public void testUseContentTypeWithoutCharsetExpiresConfiguration() throws Exception {
-        HttpServlet servlet = new HttpServlet() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-                response.setContentType("text/xml; charset=iso-8859-1");
-                response.getWriter().print("Hello world");
-            }
-        };
-
-        int expectedMaxAgeInSeconds = 5 * 60;
-
-        validate(servlet, expectedMaxAgeInSeconds);
-    }
-
-    @Test
-    public void testUseContentTypeExpiresConfiguration() throws Exception {
-        HttpServlet servlet = new HttpServlet() {
-            private static final long serialVersionUID = 1L;
-
-            @Override
-            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-                response.setContentType("text/xml; charset=utf-8");
-                response.getWriter().print("Hello world");
-            }
-        };
-
-        int expectedMaxAgeInSeconds = 3 * 60;
-
-        validate(servlet, expectedMaxAgeInSeconds);
-    }
-
-    @Test
-    public void testParseExpiresConfigurationMonoDuration() {
-        ExpiresFilter expiresFilter = new ExpiresFilter();
-        ExpiresConfiguration actualConfiguration = expiresFilter.parseExpiresConfiguration("text/html", "access plus 2 hours");
-
-        Assert.assertEquals("text/html", actualConfiguration.getContentType());
-        Assert.assertEquals(StartingPoint.ACCESS_TIME, actualConfiguration.getStartingPoint());
-
-        Assert.assertEquals(1, actualConfiguration.getDurations().size());
-        Assert.assertEquals(2, actualConfiguration.getDurations().get(0).getAmount());
-        Assert.assertEquals(DurationUnit.HOUR, actualConfiguration.getDurations().get(0).getUnit());
-
-    }
-
-    @Test
     public void testConfiguration() throws ServletException {
         MockFilterConfig filterConfig = new MockFilterConfig();
         filterConfig.addInitParameter("ExpiresDefault", "access plus 1 month");
@@ -240,17 +106,168 @@ public class ExpiresFilterTest {
         }
     }
 
+    /**
+     * Test that a resource with empty content is also processed
+     */
+    @Test
+    public void testEmptyContent() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("text/plain");
+                // no content is written in the response
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 7 * 60;
+
+        validate(servlet, expectedMaxAgeInSeconds);
+    }
+
     @Test
     public void testParseExpiresConfigurationCombinedDuration() {
         ExpiresFilter expiresFilter = new ExpiresFilter();
-        ExpiresConfiguration actualConfiguration = expiresFilter.parseExpiresConfiguration("text/html",
-                "access plus 1 month 15 days 2 hours");
+        ExpiresConfiguration actualConfiguration = expiresFilter.parseExpiresConfiguration("access plus 1 month 15 days 2 hours");
 
-        Assert.assertEquals("text/html", actualConfiguration.getContentType());
         Assert.assertEquals(StartingPoint.ACCESS_TIME, actualConfiguration.getStartingPoint());
 
         Assert.assertEquals(3, actualConfiguration.getDurations().size());
 
+    }
+
+    @Test
+    public void testParseExpiresConfigurationMonoDuration() {
+        ExpiresFilter expiresFilter = new ExpiresFilter();
+        ExpiresConfiguration actualConfiguration = expiresFilter.parseExpiresConfiguration("access plus 2 hours");
+
+        Assert.assertEquals(StartingPoint.ACCESS_TIME, actualConfiguration.getStartingPoint());
+
+        Assert.assertEquals(1, actualConfiguration.getDurations().size());
+        Assert.assertEquals(2, actualConfiguration.getDurations().get(0).getAmount());
+        Assert.assertEquals(DurationUnit.HOUR, actualConfiguration.getDurations().get(0).getUnit());
+
+    }
+
+    @Test
+    public void testSkipBecauseCacheControlMaxAgeIsDefined() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("text/xml; charset=utf-8");
+                response.addHeader("Cache-Control", "private, max-age=232");
+                response.getWriter().print("Hello world");
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 232;
+        validate(servlet, expectedMaxAgeInSeconds);
+    }
+
+    @Test
+    public void testSkipBecauseExpiresIsDefined() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("text/xml; charset=utf-8");
+                response.addDateHeader("Expires", System.currentTimeMillis());
+                response.getWriter().print("Hello world");
+            }
+        };
+
+        validate(servlet, null);
+    }
+
+    @Test
+    public void testUseContentTypeExpiresConfiguration() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("text/xml; charset=utf-8");
+                response.getWriter().print("Hello world");
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 3 * 60;
+
+        validate(servlet, expectedMaxAgeInSeconds);
+    }
+
+    @Test
+    public void testUseContentTypeWithoutCharsetExpiresConfiguration() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("text/xml; charset=iso-8859-1");
+                response.getWriter().print("Hello world");
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 5 * 60;
+
+        validate(servlet, expectedMaxAgeInSeconds);
+    }
+
+    @Test
+    public void testUseDefaultConfiguration1() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("image/jpeg");
+                response.getWriter().print("Hello world");
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 1 * 60;
+
+        validate(servlet, expectedMaxAgeInSeconds);
+    }
+
+    @Test
+    public void testUseDefaultConfiguration2() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("image/jpeg");
+                response.addHeader("Cache-Control", "private");
+
+                response.getWriter().print("Hello world");
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 1 * 60;
+
+        validate(servlet, expectedMaxAgeInSeconds);
+    }
+
+    @Test
+    public void testUseMajorTypeExpiresConfiguration() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType("text/json; charset=iso-8859-1");
+                response.getWriter().print("Hello world");
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 7 * 60;
+
+        validate(servlet, expectedMaxAgeInSeconds);
     }
 
     protected void validate(HttpServlet servlet, Integer expectedMaxAgeInSeconds) throws Exception {

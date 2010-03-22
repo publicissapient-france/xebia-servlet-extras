@@ -45,9 +45,53 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ * <p>
  * Port of <a
  * href="http://httpd.apache.org/docs/2.2/mod/mod_expires.html">Apache
- * mod_expires</a>.
+ * mod_expires</a>. Following documentation is inspired by
+ * <code>mod_expires</code> .
+ * </p>
+ * <p>
+ * <strong>Description</strong>
+ * </p>
+ * <p>
+ * Generation of <code>Expires</code> and <code>Cache-Control</code> HTTP
+ * headers according to user-specified criteria
+ * </p>
+ * <p>
+ * <strong>Summary</strong>
+ * </p>
+ * <p>
+ * This module controls the setting of the <code>Expires</code> HTTP header and
+ * the <code>max-age</code> directive of the <code>Cache-Control</code> HTTP
+ * header in server responses. The expiration date can set to be relative to
+ * either the time the source file was last modified, or to the time of the
+ * client access.
+ * </p>
+ * 
+ * <p>
+ * These HTTP headers are an instruction to the client about the document's
+ * validity and persistence. If cached, the document may be fetched from the
+ * cache rather than from the source until this time has passed. After that, the
+ * cache copy is considered "expired" and invalid, and a new copy must be
+ * obtained from the source.
+ * </p>
+ * 
+ * <p>
+ * To modify <code>Cache-Control</code> directives other than
+ * <code>max-age</code> (see <a
+ * href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.9">RFC
+ * 2616 section 14.9</a>), you can use the
+ * <code class="directive"><a href="http://httpd.apache.org/docs/2.2/mod/mod_headers.html#header">Header</a></code>
+ * directive for the <a
+ * href="http://httpd.apache.org/docs/2.2/mod/mod_headers.html">Apache Httpd
+ * mod_headers</a> module.
+ * </p>
+ * 
+ * 
+ * 
+ * 
+ * 
  * 
  * <p>
  * Note : "Cache-Control" header is modified to add the "max-age" directive
@@ -62,12 +106,6 @@ import org.slf4j.LoggerFactory;
  * @author <a href="mailto:cyrille@cyrilleleclerc.com">Cyrille Le Clerc</a>
  */
 public class ExpiresFilter implements Filter {
-
-    private static final String PARAMETER_EXPIRES_ACTIVE = "ExpiresActive";
-
-    private static final String PARAMETER_EXPIRES_DEFAULT = "ExpiresDefault";
-
-    private static final String PARAMETER_EXPIRES_BY_TYPE = "ExpiresByType";
 
     protected static class Duration {
 
@@ -119,25 +157,18 @@ public class ExpiresFilter implements Filter {
     }
 
     protected static class ExpiresConfiguration {
-        private String contentType;
-
         private List<Duration> durations;
 
         private StartingPoint startingPoint;
 
-        public ExpiresConfiguration(String contentType, StartingPoint startingPoint, Duration... durations) {
-            this(contentType, startingPoint, Arrays.asList(durations));
+        public ExpiresConfiguration(StartingPoint startingPoint, Duration... durations) {
+            this(startingPoint, Arrays.asList(durations));
         }
 
-        public ExpiresConfiguration(String contentType, StartingPoint startingPoint, List<Duration> durations) {
+        public ExpiresConfiguration(StartingPoint startingPoint, List<Duration> durations) {
             super();
-            this.contentType = contentType;
             this.startingPoint = startingPoint;
             this.durations = durations;
-        }
-
-        public String getContentType() {
-            return contentType;
         }
 
         public List<Duration> getDurations() {
@@ -150,7 +181,7 @@ public class ExpiresFilter implements Filter {
 
         @Override
         public String toString() {
-            return "ExpiresConfiguration[contentType=" + contentType + ", startingPoint=" + startingPoint + ", duration=" + durations + "]";
+            return "ExpiresConfiguration[startingPoint=" + startingPoint + ", duration=" + durations + "]";
         }
     }
 
@@ -220,6 +251,8 @@ public class ExpiresFilter implements Filter {
 
         private ServletOutputStream servletOutputStream;
 
+        private boolean writeStarted;
+
         public XHttpServletResponse(HttpServletRequest request, HttpServletResponse response) {
             super(response);
             this.request = request;
@@ -284,6 +317,10 @@ public class ExpiresFilter implements Filter {
             return printWriter;
         }
 
+        public boolean isWriteStarted() {
+            return writeStarted;
+        }
+
         @Override
         public void setDateHeader(String name, long date) {
             super.setDateHeader(name, date);
@@ -316,6 +353,10 @@ public class ExpiresFilter implements Filter {
                 header.setValue(value);
             }
         }
+
+        public void setWriteStarted(boolean writeStarted) {
+            this.writeStarted = writeStarted;
+        }
     }
 
     /**
@@ -328,8 +369,6 @@ public class ExpiresFilter implements Filter {
         private HttpServletRequest request;
 
         private XHttpServletResponse response;
-
-        private boolean writeStarted;
 
         public XPrintWriter(PrintWriter out, HttpServletRequest request, XHttpServletResponse response) {
             super(out);
@@ -359,8 +398,8 @@ public class ExpiresFilter implements Filter {
         }
 
         private void fireBeforeWriteResponseBodyEvent() {
-            if (!writeStarted) {
-                writeStarted = true;
+            if (!this.response.isWriteStarted()) {
+                this.response.setWriteStarted(true);
                 onBeforeWriteResponseBody(request, response);
             }
         }
@@ -514,8 +553,6 @@ public class ExpiresFilter implements Filter {
 
         private ServletOutputStream servletOutputStream;
 
-        private boolean writeStarted;
-
         public XServletOutputStream(ServletOutputStream servletOutputStream, HttpServletRequest request, XHttpServletResponse response) {
             super();
             this.servletOutputStream = servletOutputStream;
@@ -529,8 +566,8 @@ public class ExpiresFilter implements Filter {
         }
 
         private void fireOnBeforeWriteResponseBodyEvent() {
-            if (!writeStarted) {
-                writeStarted = true;
+            if (!this.response.isWriteStarted()) {
+                this.response.setWriteStarted(true);
                 onBeforeWriteResponseBody(request, response);
             }
         }
@@ -638,6 +675,12 @@ public class ExpiresFilter implements Filter {
 
     private static final Logger logger = LoggerFactory.getLogger(ExpiresFilter.class);
 
+    private static final String PARAMETER_EXPIRES_ACTIVE = "ExpiresActive";
+
+    private static final String PARAMETER_EXPIRES_BY_TYPE = "ExpiresByType";
+
+    private static final String PARAMETER_EXPIRES_DEFAULT = "ExpiresDefault";
+
     /**
      * Returns <code>true</code> if the given <code>str</code> contains the
      * given <code>searchStr</code>.
@@ -704,14 +747,21 @@ public class ExpiresFilter implements Filter {
 
             if (response.isCommitted()) {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Can not apply ExpiresFilter on already committed response for request " + httpRequest.getRequestURL());
+                    logger.debug("Request '" + httpRequest.getRequestURL()
+                            + "', can not apply ExpiresFilter on already committed response.");
                 }
                 chain.doFilter(request, response);
-            } else if(active){
-                chain.doFilter(request, new XHttpServletResponse(httpRequest, httpResponse));
+            } else if (active) {
+                XHttpServletResponse xResponse = new XHttpServletResponse(httpRequest, httpResponse);
+                chain.doFilter(request, xResponse);
+                if (!xResponse.isWriteStarted()) {
+                    // Empty response, manually trigger
+                    // onBeforeWriteResponseBody()
+                    onBeforeWriteResponseBody(httpRequest, xResponse);
+                }
             } else {
                 if (logger.isDebugEnabled()) {
-                    logger.debug("ExpiresFilter is NOT active for request " + httpRequest.getRequestURL());
+                    logger.debug("Request '" + httpRequest.getRequestURL() + "', ExpiresFilter is NOT active");
                 }
                 chain.doFilter(request, response);
             }
@@ -737,27 +787,34 @@ public class ExpiresFilter implements Filter {
         // lookup exact content-type match (e.g.
         // "text/html; charset=iso-8859-1")
         ExpiresConfiguration configuration = expiresConfigurationByContentType.get(contentType);
+        String matchingContentType = contentType;
 
         if (configuration == null && contentType.contains(";")) {
             // lookup content-type without charset match (e.g. "text/html")
             String contentTypeWithoutCharset = substringBefore(contentType, ";").trim();
             configuration = expiresConfigurationByContentType.get(contentTypeWithoutCharset);
+            matchingContentType = contentTypeWithoutCharset;
         }
 
         if (configuration == null && contentType.contains("/")) {
             // lookup content-type without charset match (e.g. "text/html")
             String majorType = substringBefore(contentType, "/");
             configuration = expiresConfigurationByContentType.get(majorType);
+            matchingContentType = majorType;
         }
 
         if (configuration == null) {
             configuration = defaultExpiresConfiguration;
+            matchingContentType = "#DEFAULT#";
         }
-        logger.trace("Use {} for content type {}", configuration, contentType);
 
         if (configuration == null) {
+            logger.trace("No Expires configuration found for content-type {}", contentType);
             return null;
         }
+
+        logger.trace("Use {} matching '{}' for content-type '{}'", new Object[] { configuration, matchingContentType, contentType });
+
         Calendar calendar;
         switch (configuration.getStartingPoint()) {
         case ACCESS_TIME:
@@ -795,17 +852,19 @@ public class ExpiresFilter implements Filter {
 
             if (name.startsWith(PARAMETER_EXPIRES_BY_TYPE)) {
                 String contentType = name.substring(PARAMETER_EXPIRES_BY_TYPE.length()).trim();
-                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(contentType, value);
+                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(value);
                 this.expiresConfigurationByContentType.put(contentType, expiresConfiguration);
             } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_DEFAULT)) {
-                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(null, value);
+                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(value);
                 this.defaultExpiresConfiguration = expiresConfiguration;
             } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_ACTIVE)) {
-                active = "On".equalsIgnoreCase(value);
+                active = "On".equalsIgnoreCase(value) || Boolean.valueOf(value);
             } else {
                 logger.warn("Uknown parameter '" + name + "' with value '" + value + "' is ignored !");
             }
         }
+
+        logger.info(this.toString());
     }
 
     public boolean isActive() {
@@ -827,15 +886,16 @@ public class ExpiresFilter implements Filter {
         String cacheControlHeader = response.getStringHeader(HEADER_CACHE_CONTROL);
         boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
         if (expirationHeaderHasBeenSet) {
-            logger.debug("Expiration header already defined for request {}", request.getRequestURI());
+            logger.debug("Request '{}' with content-type '{}‘, expiration header already defined", request.getRequestURI(), response
+                    .getContentType());
         } else {
             Date expirationDate = getExpirationDate(response);
             if (expirationDate == null) {
-                logger.debug("No expiration date configured for request {} content type '{}'", request.getRequestURI(), response
-                        .getContentType());
+                logger.debug("Request '{}' with content-type '{}‘, no expiration configured for given content-type", request.getRequestURI(),
+                        response.getContentType());
             } else {
-                logger.info("Set expiration date {} for request {} contentType'{}'", new Object[] { expirationDate,
-                        request.getRequestURI(), response.getContentType() });
+                logger.debug("Request '{}' with content-type '{}‘, set expiration date {}", new Object[] { request.getRequestURI(),
+                        response.getContentType(), expirationDate });
 
                 String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
 
@@ -853,7 +913,7 @@ public class ExpiresFilter implements Filter {
      * @param line
      * @return
      */
-    protected ExpiresConfiguration parseExpiresConfiguration(String contentType, String line) {
+    protected ExpiresConfiguration parseExpiresConfiguration(String line) {
         line = line.trim();
 
         StringTokenizer tokenizer = new StringTokenizer(line, " ");
@@ -935,7 +995,7 @@ public class ExpiresFilter implements Filter {
             }
         }
 
-        return new ExpiresConfiguration(contentType, startingPoint, durations);
+        return new ExpiresConfiguration(startingPoint, durations);
     }
 
     public void setActive(boolean active) {
@@ -948,5 +1008,11 @@ public class ExpiresFilter implements Filter {
 
     public void setExpiresConfigurationByContentType(Map<String, ExpiresConfiguration> expiresConfigurationByContentType) {
         this.expiresConfigurationByContentType = expiresConfigurationByContentType;
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getSimpleName() + "[default=" + this.defaultExpiresConfiguration + ", byType="
+                + this.expiresConfigurationByContentType + ", active=" + this.active + "]";
     }
 }
