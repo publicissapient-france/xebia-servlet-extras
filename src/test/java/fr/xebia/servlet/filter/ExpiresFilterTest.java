@@ -54,11 +54,21 @@ public class ExpiresFilterTest {
         filterConfig.addInitParameter("ExpiresByType text/html", "access plus 1 month 15 days 2 hours");
         filterConfig.addInitParameter("ExpiresByType image/gif", "modification plus 5 hours 3 minutes");
         filterConfig.addInitParameter("ExpiresActive", "Off");
+        filterConfig.addInitParameter("ExpiresExcludedResponseStatusCodes", "304, 503");
 
         ExpiresFilter expiresFilter = new ExpiresFilter();
         expiresFilter.init(filterConfig);
 
         Assert.assertEquals(false, expiresFilter.isActive());
+
+        // VERIFY EXCLUDED RESPONSE STATUS CODES
+        {
+
+            int[] excludedResponseStatusCodes = expiresFilter.getExcludedResponseStatusCodesAsInts();
+            Assert.assertEquals(2, excludedResponseStatusCodes.length);
+            Assert.assertEquals(304, excludedResponseStatusCodes[0]);
+            Assert.assertEquals(503, excludedResponseStatusCodes[1]);
+        }
 
         // VERIFY DEFAULT CONFIGURATION
         {
@@ -166,7 +176,23 @@ public class ExpiresFilterTest {
         int expectedMaxAgeInSeconds = 232;
         validate(servlet, expectedMaxAgeInSeconds);
     }
-    
+
+    @Test
+    public void testExcludedResponseStatusCode() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+                response.addHeader("ETag", "W/\"1934-1269208821000\"");
+                response.addDateHeader("Date", System.currentTimeMillis());
+            }
+        };
+
+        validate(servlet, null, HttpServletResponse.SC_NOT_MODIFIED);
+    }
+
     @Test
     public void testNullContentType() throws Exception {
         HttpServlet servlet = new HttpServlet() {
@@ -286,6 +312,10 @@ public class ExpiresFilterTest {
     }
 
     protected void validate(HttpServlet servlet, Integer expectedMaxAgeInSeconds) throws Exception {
+        validate(servlet, expectedMaxAgeInSeconds, HttpURLConnection.HTTP_OK);
+    }
+
+    protected void validate(HttpServlet servlet, Integer expectedMaxAgeInSeconds, int expectedResponseStatusCode) throws Exception {
         // SETUP
         int port = 6666;
         Server server = new Server(port);
@@ -296,6 +326,7 @@ public class ExpiresFilterTest {
         filterConfig.addInitParameter("ExpiresByType text/xml; charset=utf-8", "access plus 3 minutes");
         filterConfig.addInitParameter("ExpiresByType text/xml", "access plus 5 minutes");
         filterConfig.addInitParameter("ExpiresByType text", "access plus 7 minutes");
+        filterConfig.addInitParameter("ExpiresExcludedResponseStatusCodes", "304, 503");
 
         ExpiresFilter expiresFilter = new ExpiresFilter();
         expiresFilter.init(filterConfig);
@@ -313,7 +344,7 @@ public class ExpiresFilterTest {
             HttpURLConnection httpURLConnection = (HttpURLConnection) new URL("http://localhost:" + port + "/test").openConnection();
 
             // VALIDATE
-            Assert.assertEquals(HttpURLConnection.HTTP_OK, httpURLConnection.getResponseCode());
+            Assert.assertEquals(expectedResponseStatusCode, httpURLConnection.getResponseCode());
 
             for (Entry<String, List<String>> field : httpURLConnection.getHeaderFields().entrySet()) {
                 System.out.println(field.getKey() + ": " + StringUtils.arrayToDelimitedString(field.getValue().toArray(), ", "));

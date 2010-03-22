@@ -29,6 +29,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.StringTokenizer;
+import java.util.regex.Pattern;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -251,11 +252,31 @@ public class ExpiresFilter implements Filter {
 
         private ServletOutputStream servletOutputStream;
 
+        private int status = HttpServletResponse.SC_OK;
+
         private boolean writeStarted;
 
         public XHttpServletResponse(HttpServletRequest request, HttpServletResponse response) {
             super(response);
             this.request = request;
+        }
+
+        @Override
+        public void sendError(int sc) throws IOException {
+            this.status = sc;
+            super.sendError(sc);
+        }
+
+        @Override
+        public void sendError(int sc, String msg) throws IOException {
+            this.status = sc;
+            super.sendError(sc, msg);
+        }
+
+        @Override
+        public void sendRedirect(String location) throws IOException {
+            this.status = HttpServletResponse.SC_FOUND;
+            super.sendRedirect(location);
         }
 
         @Override
@@ -302,6 +323,10 @@ public class ExpiresFilter implements Filter {
                 servletOutputStream = new XServletOutputStream(super.getOutputStream(), request, this);
             }
             return servletOutputStream;
+        }
+
+        public int getStatus() {
+            return status;
         }
 
         protected String getStringHeader(String name) {
@@ -352,6 +377,18 @@ public class ExpiresFilter implements Filter {
             } else {
                 header.setValue(value);
             }
+        }
+
+        @Override
+        public void setStatus(int sc) {
+            this.status = sc;
+            super.setStatus(sc);
+        }
+
+        @Override
+        public void setStatus(int sc, String sm) {
+            this.status = sc;
+            super.setStatus(sc, sm);
         }
 
         public void setWriteStarted(boolean writeStarted) {
@@ -669,6 +706,12 @@ public class ExpiresFilter implements Filter {
 
     }
 
+    /**
+     * {@link Pattern} for a comma delimited string that support whitespace
+     * characters
+     */
+    private static final Pattern commaSeparatedValuesPattern = Pattern.compile("\\s*,\\s*");
+
     private static final String HEADER_CACHE_CONTROL = "Cache-Control";
 
     private static final String HEADER_EXPIRES = "Expires";
@@ -680,6 +723,34 @@ public class ExpiresFilter implements Filter {
     private static final String PARAMETER_EXPIRES_BY_TYPE = "ExpiresByType";
 
     private static final String PARAMETER_EXPIRES_DEFAULT = "ExpiresDefault";
+
+    private static final String PARAMETER_EXPIRES_EXCLUDED_RESPONSE_STATUS_CODES = "ExpiresExcludedResponseStatusCodes";
+
+    /**
+     * Convert a given comma delimited list of regular expressions into an array
+     * of String
+     * 
+     * @return array of patterns (non <code>null</code>)
+     */
+    protected static String[] commaDelimitedListToStringArray(String commaDelimitedStrings) {
+        return (commaDelimitedStrings == null || commaDelimitedStrings.length() == 0) ? new String[0] : commaSeparatedValuesPattern
+                .split(commaDelimitedStrings);
+    }
+
+    protected static int[] commaDelimitedListToIntArray(String commaDelimitedInts) {
+        String[] intsAsStrings = commaDelimitedListToStringArray(commaDelimitedInts);
+        int[] ints = new int[intsAsStrings.length];
+        for (int i = 0; i < intsAsStrings.length; i++) {
+            String intAsString = intsAsStrings[i];
+            try {
+                ints[i] = Integer.parseInt(intAsString);
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Exception parsing number '" + i + "' (zero based) of comma delimited list '"
+                        + commaDelimitedInts + "'");
+            }
+        }
+        return ints;
+    }
 
     /**
      * Returns <code>true</code> if the given <code>str</code> contains the
@@ -708,6 +779,25 @@ public class ExpiresFilter implements Filter {
         return !isEmpty(str);
     }
 
+    /**
+     * Convert an array of ints in a comma delimited string
+     */
+    protected static String intsToCommaDelimitedString(int[] ints) {
+        if (ints == null) {
+            return "";
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < ints.length; i++) {
+            result.append(ints[i]);
+            if (i < ints.length) {
+                result.append(", ");
+            }
+        }
+        return result.toString();
+    }
+
     protected static String substringBefore(String str, String separator) {
         if (str == null || str.isEmpty() || separator == null) {
             return null;
@@ -730,6 +820,12 @@ public class ExpiresFilter implements Filter {
      * Default Expires configuration.
      */
     private ExpiresConfiguration defaultExpiresConfiguration;
+
+    /**
+     * list of response status code for which the {@link ExpiresFilter} will not
+     * generate expiration headers.
+     */
+    private int[] excludedResponseStatusCodes = new int[] { HttpServletResponse.SC_NOT_MODIFIED };
 
     /**
      * Expires configuration by content type. Visible for test.
@@ -772,6 +868,14 @@ public class ExpiresFilter implements Filter {
 
     public ExpiresConfiguration getDefaultExpiresConfiguration() {
         return defaultExpiresConfiguration;
+    }
+
+    public String getExcludedResponseStatusCodes() {
+        return intsToCommaDelimitedString(excludedResponseStatusCodes);
+    }
+
+    public int[] getExcludedResponseStatusCodesAsInts() {
+        return excludedResponseStatusCodes;
     }
 
     /**
@@ -850,17 +954,23 @@ public class ExpiresFilter implements Filter {
             String name = names.nextElement();
             String value = filterConfig.getInitParameter(name);
 
-            if (name.startsWith(PARAMETER_EXPIRES_BY_TYPE)) {
-                String contentType = name.substring(PARAMETER_EXPIRES_BY_TYPE.length()).trim();
-                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(value);
-                this.expiresConfigurationByContentType.put(contentType, expiresConfiguration);
-            } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_DEFAULT)) {
-                ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(value);
-                this.defaultExpiresConfiguration = expiresConfiguration;
-            } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_ACTIVE)) {
-                active = "On".equalsIgnoreCase(value) || Boolean.valueOf(value);
-            } else {
-                logger.warn("Uknown parameter '" + name + "' with value '" + value + "' is ignored !");
+            try {
+                if (name.startsWith(PARAMETER_EXPIRES_BY_TYPE)) {
+                    String contentType = name.substring(PARAMETER_EXPIRES_BY_TYPE.length()).trim();
+                    ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(value);
+                    this.expiresConfigurationByContentType.put(contentType, expiresConfiguration);
+                } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_DEFAULT)) {
+                    ExpiresConfiguration expiresConfiguration = parseExpiresConfiguration(value);
+                    this.defaultExpiresConfiguration = expiresConfiguration;
+                } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_ACTIVE)) {
+                    this.active = "On".equalsIgnoreCase(value) || Boolean.valueOf(value);
+                } else if (name.equalsIgnoreCase(PARAMETER_EXPIRES_EXCLUDED_RESPONSE_STATUS_CODES)) {
+                    this.excludedResponseStatusCodes = commaDelimitedListToIntArray(value);
+                } else {
+                    logger.warn("Uknown parameter '" + name + "' with value '" + value + "' is ignored !");
+                }
+            } catch (RuntimeException e) {
+                throw new ServletException("Exception processing configuration parameter '" + name + "':'" + value + "'", e);
             }
         }
 
@@ -886,24 +996,36 @@ public class ExpiresFilter implements Filter {
         String cacheControlHeader = response.getStringHeader(HEADER_CACHE_CONTROL);
         boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
         if (expirationHeaderHasBeenSet) {
-            logger.debug("Request '{}' with content-type '{}‘, expiration header already defined", request.getRequestURI(), response
-                    .getContentType());
-        } else {
-            Date expirationDate = getExpirationDate(response);
-            if (expirationDate == null) {
-                logger.debug("Request '{}' with content-type '{}‘, no expiration configured for given content-type", request
-                        .getRequestURI(), response.getContentType());
-            } else {
-                logger.debug("Request '{}' with content-type '{}‘, set expiration date {}", new Object[] { request.getRequestURI(),
-                        response.getContentType(), expirationDate });
+            logger.debug("Request '{}' with response status '{}' content-type '{}‘, expiration header already defined", new Object[] {
+                    request.getRequestURI(), response.getStatus(), response.getContentType() });
+            return;
+        }
 
-                String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
-
-                String newCacheControlHeader = (cacheControlHeader == null) ? maxAgeDirective : cacheControlHeader + ", " + maxAgeDirective;
-                response.setHeader(HEADER_CACHE_CONTROL, newCacheControlHeader);
-                response.setDateHeader(HEADER_EXPIRES, expirationDate.getTime());
+        for (int skippedStatusCode : this.excludedResponseStatusCodes) {
+            if (response.getStatus() == skippedStatusCode) {
+                logger.debug(
+                        "Request '{}' with response status '{}' content-type '{}‘, skip expiration header generation for given status",
+                        new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
+                return;
             }
         }
+
+        Date expirationDate = getExpirationDate(response);
+        if (expirationDate == null) {
+            logger.debug(
+                    "Request '{}' with response status '{}' content-type '{}‘ status , no expiration configured for given content-type",
+                    new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
+        } else {
+            logger.debug("Request '{}' with response status '{}' content-type '{}‘, set expiration date {}", new Object[] {
+                    request.getRequestURI(), response.getStatus(), response.getContentType(), expirationDate });
+
+            String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
+
+            String newCacheControlHeader = (cacheControlHeader == null) ? maxAgeDirective : cacheControlHeader + ", " + maxAgeDirective;
+            response.setHeader(HEADER_CACHE_CONTROL, newCacheControlHeader);
+            response.setDateHeader(HEADER_EXPIRES, expirationDate.getTime());
+        }
+
     }
 
     /**
@@ -1006,13 +1128,18 @@ public class ExpiresFilter implements Filter {
         this.defaultExpiresConfiguration = defaultExpiresConfiguration;
     }
 
+    public void setExcludedResponseStatusCodes(int[] excludedResponseStatusCodes) {
+        this.excludedResponseStatusCodes = excludedResponseStatusCodes;
+    }
+
     public void setExpiresConfigurationByContentType(Map<String, ExpiresConfiguration> expiresConfigurationByContentType) {
         this.expiresConfigurationByContentType = expiresConfigurationByContentType;
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "[default=" + this.defaultExpiresConfiguration + ", byType="
-                + this.expiresConfigurationByContentType + ", active=" + this.active + "]";
+        return getClass().getSimpleName() + "[active=" + this.active + ", excludedResponseStatusCode="
+                + intsToCommaDelimitedString(this.excludedResponseStatusCodes) + ", default=" + this.defaultExpiresConfiguration
+                + ", byType=" + this.expiresConfigurationByContentType + "]";
     }
 }
