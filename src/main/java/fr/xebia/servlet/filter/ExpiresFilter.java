@@ -789,14 +789,14 @@ public class ExpiresFilter implements Filter {
         ExpiresConfiguration configuration = expiresConfigurationByContentType.get(contentType);
         String matchingContentType = contentType;
 
-        if (configuration == null && contentType.contains(";")) {
+        if (configuration == null && contains(contentType, ";")) {
             // lookup content-type without charset match (e.g. "text/html")
             String contentTypeWithoutCharset = substringBefore(contentType, ";").trim();
             configuration = expiresConfigurationByContentType.get(contentTypeWithoutCharset);
             matchingContentType = contentTypeWithoutCharset;
         }
 
-        if (configuration == null && contentType.contains("/")) {
+        if (configuration == null && contains(contentType, "/")) {
             // lookup content-type without charset match (e.g. "text/html")
             String majorType = substringBefore(contentType, "/");
             configuration = expiresConfigurationByContentType.get(majorType);
@@ -864,7 +864,7 @@ public class ExpiresFilter implements Filter {
             }
         }
 
-        logger.info(this.toString());
+        logger.info("Filter initialized with configuration " + this.toString());
     }
 
     public boolean isActive() {
@@ -891,8 +891,8 @@ public class ExpiresFilter implements Filter {
         } else {
             Date expirationDate = getExpirationDate(response);
             if (expirationDate == null) {
-                logger.debug("Request '{}' with content-type '{}‘, no expiration configured for given content-type", request.getRequestURI(),
-                        response.getContentType());
+                logger.debug("Request '{}' with content-type '{}‘, no expiration configured for given content-type", request
+                        .getRequestURI(), response.getContentType());
             } else {
                 logger.debug("Request '{}' with content-type '{}‘, set expiration date {}", new Object[] { request.getRequestURI(),
                         response.getContentType(), expirationDate });

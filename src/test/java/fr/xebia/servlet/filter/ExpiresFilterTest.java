@@ -166,6 +166,21 @@ public class ExpiresFilterTest {
         int expectedMaxAgeInSeconds = 232;
         validate(servlet, expectedMaxAgeInSeconds);
     }
+    
+    @Test
+    public void testNullContentType() throws Exception {
+        HttpServlet servlet = new HttpServlet() {
+            private static final long serialVersionUID = 1L;
+
+            @Override
+            protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                response.setContentType(null);
+            }
+        };
+
+        int expectedMaxAgeInSeconds = 1 * 60;
+        validate(servlet, expectedMaxAgeInSeconds);
+    }
 
     @Test
     public void testSkipBecauseExpiresIsDefined() throws Exception {
