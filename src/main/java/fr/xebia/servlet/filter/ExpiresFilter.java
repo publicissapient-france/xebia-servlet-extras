@@ -90,20 +90,6 @@ import org.slf4j.LoggerFactory;
  * </p>
  * 
  * 
- * 
- * 
- * 
- * 
- * <p>
- * Note : "Cache-Control" header is modified to add the "max-age" directive
- * instead of adding a second "Cache-Control" header because mod_expires works
- * like this. It makes senses as the <a
- * href="http://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.9">RFC
- * 1616 - Hypertext Transfer Protocol -- HTTP/1.1, Cache-Control chapter</a>
- * does not state that the "Cache-Control" header can appear several times to
- * hold several directives.
- * </p>
- * 
  * @author <a href="mailto:cyrille@cyrilleleclerc.com">Cyrille Le Clerc</a>
  */
 public class ExpiresFilter implements Filter {
@@ -1028,6 +1014,17 @@ public class ExpiresFilter implements Filter {
 
     }
 
+    protected static boolean startsWithIgnoreCase(String string, String prefix) {
+        if (string == null || prefix == null) {
+            return string == null && prefix == null;
+        }
+        if (prefix.length() > string.length()) {
+            return false;
+        }
+
+        return string.regionMatches(true, 0, prefix, 0, prefix.length());
+    }
+
     /**
      * "access plus 1 month 15 days 2 hours"
      * "access plus 1 month 15 days 2 hours"
@@ -1045,16 +1042,26 @@ public class ExpiresFilter implements Filter {
         try {
             currentToken = tokenizer.nextToken();
         } catch (NoSuchElementException e) {
-            throw new IllegalStateException("Starting point (access|now|modification) not found in directive '" + line + "'");
+            throw new IllegalStateException("Starting point (access|now|modification|a<seconds>|m<seconds>) not found in directive '"
+                    + line + "'");
         }
+
         StartingPoint startingPoint;
         if ("access".equalsIgnoreCase(currentToken) || "now".equalsIgnoreCase(currentToken)) {
             startingPoint = StartingPoint.ACCESS_TIME;
         } else if ("modification".equalsIgnoreCase(currentToken)) {
             startingPoint = StartingPoint.LAST_MODIFICATION_TIME;
+        } else if (!tokenizer.hasMoreTokens() && startsWithIgnoreCase(currentToken, "a")) {
+            startingPoint = StartingPoint.ACCESS_TIME;
+            // trick : convert duration configuration from old to new style 
+            tokenizer = new StringTokenizer(currentToken.substring(1) + " seconds", " ");
+        } else if (!tokenizer.hasMoreTokens() && startsWithIgnoreCase(currentToken, "m")) {
+            startingPoint = StartingPoint.LAST_MODIFICATION_TIME;
+            // trick : convert duration configuration from old to new style 
+            tokenizer = new StringTokenizer(currentToken.substring(1) + " seconds", " ");
         } else {
-            throw new IllegalStateException("Invalid starting point (access|now|modification) '" + currentToken + "' in directive '" + line
-                    + "'");
+            throw new IllegalStateException("Invalid starting point (access|now|modification|a<seconds>|m<seconds>) '" + currentToken
+                    + "' in directive '" + line + "'");
         }
 
         try {

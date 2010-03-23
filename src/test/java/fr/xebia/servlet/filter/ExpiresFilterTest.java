@@ -53,6 +53,8 @@ public class ExpiresFilterTest {
         filterConfig.addInitParameter("ExpiresDefault", "access plus 1 month");
         filterConfig.addInitParameter("ExpiresByType text/html", "access plus 1 month 15 days 2 hours");
         filterConfig.addInitParameter("ExpiresByType image/gif", "modification plus 5 hours 3 minutes");
+        filterConfig.addInitParameter("ExpiresByType image/jpg", "A10000");
+        filterConfig.addInitParameter("ExpiresByType video/mpeg", "M20000");
         filterConfig.addInitParameter("ExpiresActive", "Off");
         filterConfig.addInitParameter("ExpiresExcludedResponseStatusCodes", "304, 503");
 
@@ -113,6 +115,30 @@ public class ExpiresFilterTest {
             Assert.assertEquals(DurationUnit.MINUTE, threeMinutes.getUnit());
             Assert.assertEquals(3, threeMinutes.getAmount());
 
+        }
+        // VERIFY IMAGE/JPG
+        {
+            ExpiresConfiguration expiresConfiguration = expiresFilter.getExpiresConfigurationByContentType().get("image/jpg");
+            Assert.assertEquals(StartingPoint.ACCESS_TIME, expiresConfiguration.getStartingPoint());
+
+            Assert.assertEquals(1, expiresConfiguration.getDurations().size());
+
+            Duration tenThousandSeconds = expiresConfiguration.getDurations().get(0);
+            Assert.assertEquals(DurationUnit.SECOND, tenThousandSeconds.getUnit());
+            Assert.assertEquals(10000, tenThousandSeconds.getAmount());
+
+
+        }
+        // VERIFY VIDEO/MPEG
+        {
+            ExpiresConfiguration expiresConfiguration = expiresFilter.getExpiresConfigurationByContentType().get("video/mpeg");
+            Assert.assertEquals(StartingPoint.LAST_MODIFICATION_TIME, expiresConfiguration.getStartingPoint());
+
+            Assert.assertEquals(1, expiresConfiguration.getDurations().size());
+
+            Duration twentyThousandSeconds = expiresConfiguration.getDurations().get(0);
+            Assert.assertEquals(DurationUnit.SECOND, twentyThousandSeconds.getUnit());
+            Assert.assertEquals(20000, twentyThousandSeconds.getAmount());
         }
     }
 
@@ -357,13 +383,13 @@ public class ExpiresFilterTest {
                 actualMaxAgeInSeconds = null;
             } else {
                 actualMaxAgeInSeconds = null;
-                System.out.println("Evaluate Cache-Control:" + cacheControlHeader);
+                // System.out.println("Evaluate Cache-Control:" + cacheControlHeader);
                 StringTokenizer cacheControlTokenizer = new StringTokenizer(cacheControlHeader, ",");
                 while (cacheControlTokenizer.hasMoreTokens() && actualMaxAgeInSeconds == null) {
                     String cacheDirective = cacheControlTokenizer.nextToken();
-                    System.out.println("\tEvaluate directive: " + cacheDirective);
+                    // System.out.println("\tEvaluate directive: " + cacheDirective);
                     StringTokenizer cacheDirectiveTokenizer = new StringTokenizer(cacheDirective, "=");
-                    System.out.println("countTokens=" + cacheDirectiveTokenizer.countTokens());
+                    // System.out.println("countTokens=" + cacheDirectiveTokenizer.countTokens());
                     if (cacheDirectiveTokenizer.countTokens() == 2) {
                         String key = cacheDirectiveTokenizer.nextToken().trim();
                         String value = cacheDirectiveTokenizer.nextToken().trim();
