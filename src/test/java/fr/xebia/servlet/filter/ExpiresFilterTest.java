@@ -65,7 +65,6 @@ public class ExpiresFilterTest {
 
         // VERIFY EXCLUDED RESPONSE STATUS CODES
         {
-
             int[] excludedResponseStatusCodes = expiresFilter.getExcludedResponseStatusCodesAsInts();
             Assert.assertEquals(2, excludedResponseStatusCodes.length);
             Assert.assertEquals(304, excludedResponseStatusCodes[0]);

@@ -173,40 +173,6 @@ public class ExpiresFilter implements Filter {
     }
 
     /**
-     * Data structure for an Http header. It is basically a key-value pair.
-     */
-    protected static class Header {
-        /**
-         * Immutable name of the http header
-         */
-        final private String name;
-
-        /**
-         * Mutable value of the header. It can be a {@link String}, a
-         * {@link Long} to hold a date or an {@link Integer}.
-         */
-        private Object value;
-
-        public Header(String name, Object value) {
-            super();
-            this.name = name;
-            this.value = value;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public Object getValue() {
-            return value;
-        }
-
-        public void setValue(Object value) {
-            this.value = value;
-        }
-    }
-
-    /**
      * Expiration configuration starting point. Either the time the
      * html-page/servlet-response was served ({@link StartingPoint#ACCESS_TIME})
      * or the last time the html-page/servlet-response was modified (
@@ -218,19 +184,20 @@ public class ExpiresFilter implements Filter {
 
     /**
      * <p>
-     * Wrapping extension of the {@link HttpServletResponse} to :
-     * <ul>
-     * <li>Trap the "Start Write Response Body" event.</li>
-     * <li>Have read access to http headers instead of just being able to know
-     * if a header with a given name has been set (
-     * {@link HttpServletResponse#containsHeader(String)}).</li>
-     * <li>Differ http headers writing in the response stream to be able to
-     * modify them.</li>
-     * </ul>
+     * Wrapping extension of the {@link HttpServletResponse} to yrap the
+     * "Start Write Response Body" event.
+     * </p>
+     * <p>
+     * For performance optimization, this extended response only holds the
+     * {@link #lastModifiedHeader} and {@link #cacheControlHeader} instead of
+     * holding the full list of headers.
+     * </p>
      */
     public class XHttpServletResponse extends HttpServletResponseWrapper {
 
-        private List<Header> headers = new ArrayList<Header>();
+        private String cacheControlHeader;
+
+        private long lastModifiedHeader;
 
         private PrintWriter printWriter;
 
@@ -245,6 +212,58 @@ public class ExpiresFilter implements Filter {
         public XHttpServletResponse(HttpServletRequest request, HttpServletResponse response) {
             super(response);
             this.request = request;
+        }
+
+        @Override
+        public void addDateHeader(String name, long date) {
+            super.addDateHeader(name, date);
+            if (!containsHeader(HEADER_LAST_MODIFIED)) {
+                this.lastModifiedHeader = date;
+            }
+        }
+
+        @Override
+        public void addHeader(String name, String value) {
+            super.addHeader(name, value);
+            if (HEADER_CACHE_CONTROL.equalsIgnoreCase(name) && cacheControlHeader == null) {
+                cacheControlHeader = value;
+            }
+        }
+
+        public String getCacheControlHeader() {
+            return cacheControlHeader;
+        }
+
+        public boolean isLastModifiedHeaderSet() {
+            return containsHeader(HEADER_LAST_MODIFIED);
+        }
+
+        public long getLastModifiedHeader() {
+            return this.lastModifiedHeader;
+        }
+
+        @Override
+        public ServletOutputStream getOutputStream() throws IOException {
+            if (servletOutputStream == null) {
+                servletOutputStream = new XServletOutputStream(super.getOutputStream(), request, this);
+            }
+            return servletOutputStream;
+        }
+
+        public int getStatus() {
+            return status;
+        }
+
+        @Override
+        public PrintWriter getWriter() throws IOException {
+            if (printWriter == null) {
+                printWriter = new XPrintWriter(super.getWriter(), request, this);
+            }
+            return printWriter;
+        }
+
+        public boolean isWriteStarted() {
+            return writeStarted;
         }
 
         @Override
@@ -266,102 +285,18 @@ public class ExpiresFilter implements Filter {
         }
 
         @Override
-        public void addDateHeader(String name, long date) {
-            super.addDateHeader(name, date);
-            headers.add(new Header(name, date));
-        }
-
-        @Override
-        public void addHeader(String name, String value) {
-            super.addHeader(name, value);
-            headers.add(new Header(name, value));
-        }
-
-        @Override
-        public void addIntHeader(String name, int value) {
-            super.addIntHeader(name, value);
-            headers.add(new Header(name, value));
-        }
-
-        protected Long getDateHeader(String name) {
-            Header header = getHeaderObject(name);
-            if (header == null) {
-                return null;
-            } else if (header.getValue() instanceof Long) {
-                return (Long) header.getValue();
-            } else {
-                return null;
-            }
-        }
-
-        private Header getHeaderObject(String name) {
-            for (Header header : headers) {
-                if (header.getName().equalsIgnoreCase(name)) {
-                    return header;
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public ServletOutputStream getOutputStream() throws IOException {
-            if (servletOutputStream == null) {
-                servletOutputStream = new XServletOutputStream(super.getOutputStream(), request, this);
-            }
-            return servletOutputStream;
-        }
-
-        public int getStatus() {
-            return status;
-        }
-
-        protected String getStringHeader(String name) {
-            Header header = getHeaderObject(name);
-            return header == null ? null : header.getValue().toString();
-        }
-
-        @Override
-        public PrintWriter getWriter() throws IOException {
-            if (printWriter == null) {
-                printWriter = new XPrintWriter(super.getWriter(), request, this);
-            }
-            return printWriter;
-        }
-
-        public boolean isWriteStarted() {
-            return writeStarted;
-        }
-
-        @Override
         public void setDateHeader(String name, long date) {
             super.setDateHeader(name, date);
-            Header header = getHeaderObject(name);
-            if (header == null) {
-                headers.add(new Header(name, date));
-            } else {
-                header.setValue(date);
+            if (HEADER_LAST_MODIFIED.equalsIgnoreCase(name)) {
+                this.lastModifiedHeader = date;
             }
         }
 
         @Override
         public void setHeader(String name, String value) {
             super.setHeader(name, value);
-            Header header = getHeaderObject(name);
-            if (header == null) {
-                headers.add(new Header(name, value));
-            } else {
-                header.setValue(value);
-            }
-        }
-
-        @Override
-        public void setIntHeader(String name, int value) {
-            super.setIntHeader(name, value);
-            Header header = getHeaderObject(name);
-            if (header == null) {
-                headers.add(new Header(name, value));
-            } else {
-                header.setValue(value);
+            if (HEADER_CACHE_CONTROL.equalsIgnoreCase(name)) {
+                this.cacheControlHeader = value;
             }
         }
 
@@ -702,6 +637,8 @@ public class ExpiresFilter implements Filter {
 
     private static final String HEADER_EXPIRES = "Expires";
 
+    private static final String HEADER_LAST_MODIFIED = "Last-Modified";
+
     private static final Logger logger = LoggerFactory.getLogger(ExpiresFilter.class);
 
     private static final String PARAMETER_EXPIRES_ACTIVE = "ExpiresActive";
@@ -711,17 +648,6 @@ public class ExpiresFilter implements Filter {
     private static final String PARAMETER_EXPIRES_DEFAULT = "ExpiresDefault";
 
     private static final String PARAMETER_EXPIRES_EXCLUDED_RESPONSE_STATUS_CODES = "ExpiresExcludedResponseStatusCodes";
-
-    /**
-     * Convert a given comma delimited list of regular expressions into an array
-     * of String
-     * 
-     * @return array of patterns (non <code>null</code>)
-     */
-    protected static String[] commaDelimitedListToStringArray(String commaDelimitedStrings) {
-        return (commaDelimitedStrings == null || commaDelimitedStrings.length() == 0) ? new String[0] : commaSeparatedValuesPattern
-                .split(commaDelimitedStrings);
-    }
 
     protected static int[] commaDelimitedListToIntArray(String commaDelimitedInts) {
         String[] intsAsStrings = commaDelimitedListToStringArray(commaDelimitedInts);
@@ -739,6 +665,17 @@ public class ExpiresFilter implements Filter {
     }
 
     /**
+     * Convert a given comma delimited list of regular expressions into an array
+     * of String
+     * 
+     * @return array of patterns (non <code>null</code>)
+     */
+    protected static String[] commaDelimitedListToStringArray(String commaDelimitedStrings) {
+        return (commaDelimitedStrings == null || commaDelimitedStrings.length() == 0) ? new String[0] : commaSeparatedValuesPattern
+                .split(commaDelimitedStrings);
+    }
+
+    /**
      * Returns <code>true</code> if the given <code>str</code> contains the
      * given <code>searchStr</code>.
      */
@@ -747,6 +684,25 @@ public class ExpiresFilter implements Filter {
             return false;
         }
         return str.indexOf(searchStr) >= 0;
+    }
+
+    /**
+     * Convert an array of ints into a comma delimited string
+     */
+    protected static String intsToCommaDelimitedString(int[] ints) {
+        if (ints == null) {
+            return "";
+        }
+
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < ints.length; i++) {
+            result.append(ints[i]);
+            if (i < ints.length) {
+                result.append(", ");
+            }
+        }
+        return result.toString();
     }
 
     /**
@@ -765,23 +721,15 @@ public class ExpiresFilter implements Filter {
         return !isEmpty(str);
     }
 
-    /**
-     * Convert an array of ints in a comma delimited string
-     */
-    protected static String intsToCommaDelimitedString(int[] ints) {
-        if (ints == null) {
-            return "";
+    protected static boolean startsWithIgnoreCase(String string, String prefix) {
+        if (string == null || prefix == null) {
+            return string == null && prefix == null;
+        }
+        if (prefix.length() > string.length()) {
+            return false;
         }
 
-        StringBuilder result = new StringBuilder();
-
-        for (int i = 0; i < ints.length; i++) {
-            result.append(ints[i]);
-            if (i < ints.length) {
-                result.append(", ");
-            }
-        }
-        return result.toString();
+        return string.regionMatches(true, 0, prefix, 0, prefix.length());
     }
 
     protected static String substringBefore(String str, String separator) {
@@ -911,13 +859,13 @@ public class ExpiresFilter implements Filter {
             calendar = GregorianCalendar.getInstance();
             break;
         case LAST_MODIFICATION_TIME:
-            Long lastModified = response.getDateHeader("Last-Modified");
-            if (lastModified == null) {
-                // Last-Modified header not found, use now
-                calendar = GregorianCalendar.getInstance();
-            } else {
+            if (response.isLastModifiedHeaderSet()) {
+                long lastModified = response.getLastModifiedHeader();
                 calendar = GregorianCalendar.getInstance();
                 calendar.setTimeInMillis(lastModified);
+            } else {
+                // Last-Modified header not found, use now
+                calendar = GregorianCalendar.getInstance();
             }
             break;
         default:
@@ -979,7 +927,7 @@ public class ExpiresFilter implements Filter {
      * </p>
      */
     public void onBeforeWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
-        String cacheControlHeader = response.getStringHeader(HEADER_CACHE_CONTROL);
+        String cacheControlHeader = response.getCacheControlHeader();
         boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
         if (expirationHeaderHasBeenSet) {
             logger.debug("Request '{}' with response status '{}' content-type '{}‘, expiration header already defined", new Object[] {
@@ -1014,17 +962,6 @@ public class ExpiresFilter implements Filter {
 
     }
 
-    protected static boolean startsWithIgnoreCase(String string, String prefix) {
-        if (string == null || prefix == null) {
-            return string == null && prefix == null;
-        }
-        if (prefix.length() > string.length()) {
-            return false;
-        }
-
-        return string.regionMatches(true, 0, prefix, 0, prefix.length());
-    }
-
     /**
      * "access plus 1 month 15 days 2 hours"
      * "access plus 1 month 15 days 2 hours"
@@ -1053,11 +990,11 @@ public class ExpiresFilter implements Filter {
             startingPoint = StartingPoint.LAST_MODIFICATION_TIME;
         } else if (!tokenizer.hasMoreTokens() && startsWithIgnoreCase(currentToken, "a")) {
             startingPoint = StartingPoint.ACCESS_TIME;
-            // trick : convert duration configuration from old to new style 
+            // trick : convert duration configuration from old to new style
             tokenizer = new StringTokenizer(currentToken.substring(1) + " seconds", " ");
         } else if (!tokenizer.hasMoreTokens() && startsWithIgnoreCase(currentToken, "m")) {
             startingPoint = StartingPoint.LAST_MODIFICATION_TIME;
-            // trick : convert duration configuration from old to new style 
+            // trick : convert duration configuration from old to new style
             tokenizer = new StringTokenizer(currentToken.substring(1) + " seconds", " ");
         } else {
             throw new IllegalStateException("Invalid starting point (access|now|modification|a<seconds>|m<seconds>) '" + currentToken
