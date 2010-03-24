@@ -126,7 +126,6 @@ public class ExpiresFilterTest {
             Assert.assertEquals(DurationUnit.SECOND, tenThousandSeconds.getUnit());
             Assert.assertEquals(10000, tenThousandSeconds.getAmount());
 
-
         }
         // VERIFY VIDEO/MPEG
         {
@@ -382,13 +381,16 @@ public class ExpiresFilterTest {
                 actualMaxAgeInSeconds = null;
             } else {
                 actualMaxAgeInSeconds = null;
-                // System.out.println("Evaluate Cache-Control:" + cacheControlHeader);
+                // System.out.println("Evaluate Cache-Control:" +
+                // cacheControlHeader);
                 StringTokenizer cacheControlTokenizer = new StringTokenizer(cacheControlHeader, ",");
                 while (cacheControlTokenizer.hasMoreTokens() && actualMaxAgeInSeconds == null) {
                     String cacheDirective = cacheControlTokenizer.nextToken();
-                    // System.out.println("\tEvaluate directive: " + cacheDirective);
+                    // System.out.println("\tEvaluate directive: " +
+                    // cacheDirective);
                     StringTokenizer cacheDirectiveTokenizer = new StringTokenizer(cacheDirective, "=");
-                    // System.out.println("countTokens=" + cacheDirectiveTokenizer.countTokens());
+                    // System.out.println("countTokens=" +
+                    // cacheDirectiveTokenizer.countTokens());
                     if (cacheDirectiveTokenizer.countTokens() == 2) {
                         String key = cacheDirectiveTokenizer.nextToken().trim();
                         String value = cacheDirectiveTokenizer.nextToken().trim();
@@ -414,5 +416,13 @@ public class ExpiresFilterTest {
         } finally {
             server.stop();
         }
+    }
+
+    @Test
+    public void testIntsToCommaDelimitedString() {
+        String actual = ExpiresFilter.intsToCommaDelimitedString(new int[] { 500, 503 });
+        String expected = "500, 503";
+
+        Assert.assertEquals(expected, actual);
     }
 }

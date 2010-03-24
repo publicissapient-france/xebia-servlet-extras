@@ -698,7 +698,7 @@ public class ExpiresFilter implements Filter {
 
         for (int i = 0; i < ints.length; i++) {
             result.append(ints[i]);
-            if (i < ints.length) {
+            if (i < (ints.length -1)) {
                 result.append(", ");
             }
         }
