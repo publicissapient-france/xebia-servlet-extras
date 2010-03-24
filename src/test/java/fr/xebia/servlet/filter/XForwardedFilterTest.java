@@ -110,6 +110,79 @@ public class XForwardedFilterTest {
     }
     
     @Test
+    public void testIncomingRequestIsSecuredButProtocolHeaderSaysItIsNotWithDefaultValues() throws Exception {
+        // PREPARE
+        XForwardedFilter xforwardedFilter = new XForwardedFilter();
+        MockFilterConfig filterConfig = new MockFilterConfig();
+        filterConfig.addInitParameter(XForwardedFilter.PROTOCOL_HEADER_PARAMETER, "x-forwarded-proto");
+
+        xforwardedFilter.init(filterConfig);
+        MockFilterChain filterChain = new MockFilterChain();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        request.setRemoteAddr("192.168.0.10");
+        request.setSecure(true);
+        request.setScheme("https");
+        request.addHeader("x-forwarded-for", "140.211.11.130");
+        request.addHeader("x-forwarded-proto", "http");
+
+        // TEST
+        xforwardedFilter.doFilter(request, new MockHttpServletResponse(), filterChain);
+
+        // VERIFY
+        boolean actualSecure = filterChain.getRequest().isSecure();
+        assertEquals("request must be unsecured as header x-forwarded-proto said it is http", false, actualSecure);
+
+        String actualScheme = filterChain.getRequest().getScheme();
+        assertEquals("scheme must be http as header x-forwarded-proto said it is http", "http", actualScheme);
+
+        String actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
+        assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
+
+        String actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
+        assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+    }
+
+    @Test
+    public void testIncomingRequestIsSecuredButProtocolHeaderSaysItIsNotWithCustomValues() throws Exception {
+        // PREPARE
+        XForwardedFilter xforwardedFilter = new XForwardedFilter();
+        MockFilterConfig filterConfig = new MockFilterConfig();
+        filterConfig.addInitParameter(XForwardedFilter.PROTOCOL_HEADER_PARAMETER, "x-forwarded-proto");
+        filterConfig.addInitParameter(XForwardedFilter.REMOTE_IP_HEADER_PARAMETER, "x-my-forwarded-for");
+        filterConfig.addInitParameter(XForwardedFilter.HTTP_SERVER_PORT_PARAMETER, "8080");
+
+        xforwardedFilter.init(filterConfig);
+        MockFilterChain filterChain = new MockFilterChain();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        request.setRemoteAddr("192.168.0.10");
+        request.setSecure(true);
+        request.setScheme("https");
+        request.addHeader("x-my-forwarded-for", "140.211.11.130");
+        request.addHeader("x-forwarded-proto", "http");
+
+        // TEST
+        xforwardedFilter.doFilter(request, new MockHttpServletResponse(), filterChain);
+
+        // VERIFY
+        boolean actualSecure = filterChain.getRequest().isSecure();
+        assertEquals("request must be unsecured as header x-forwarded-proto said it is http", false, actualSecure);
+
+        String actualScheme = filterChain.getRequest().getScheme();
+        assertEquals("scheme must be http as header x-forwarded-proto said it is http", "http", actualScheme);
+
+        int actualServerPort = filterChain.getRequest().getServerPort();
+        assertEquals("wrong http server port", 8080, actualServerPort);
+        
+        String actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
+        assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
+
+        String actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
+        assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+    }
+
+    @Test
     public void testInvokeAllowedRemoteAddrWithNullRemoteIpHeader() throws Exception {
         // PREPARE
         XForwardedFilter xforwardedFilter = new XForwardedFilter();
@@ -323,7 +396,7 @@ public class XForwardedFilterTest {
         String actualRemoteHost = ((HttpServletRequest)filterChain.getRequest()).getRemoteHost();
         assertEquals("remoteHost", "not-allowed-internal-proxy-host", actualRemoteHost);
     }
-    
+        
     @Test
     public void testInvokeUntrustedProxyInTheChain() throws Exception {
         // PREPARE

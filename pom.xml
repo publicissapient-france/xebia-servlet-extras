@@ -5,11 +5,11 @@
    <artifactId>xebia-servlet-extras</artifactId>
    <packaging>jar</packaging>
    <description>Extras for Servlet API</description>
-   <version>1.0.1-SNAPSHOT</version>
+   <version>1.0.3</version>
    <scm>
-      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</connection>
-      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</developerConnection>
-      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</url>
+      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.3</connection>
+      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.3</developerConnection>
+      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.3</url>
    </scm>
    <build>
       <plugins>
@@ -49,25 +49,15 @@
       <extensions>
          <extension>
             <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-scm</artifactId>
+            <artifactId>wagon-webdav-jackrabbit</artifactId>
             <version>1.0-beta-6</version>
-         </extension>
-         <extension>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-manager-plexus</artifactId>
-            <version>1.1</version>
-         </extension>
-         <extension>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-svnexe</artifactId>
-            <version>1.1</version>
          </extension>
       </extensions>
    </build>
    <distributionManagement>
       <repository>
          <id>xebia-france.googlecode.com</id>
-         <url>scm:svn:https://xebia-france.googlecode.com/svn/repository/maven2/</url>
+         <url>dav:https://xebia-france.googlecode.com/svn/repository/maven2/</url>
       </repository>
    </distributionManagement>
    <dependencies>
