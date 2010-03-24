@@ -1,16 +1,15 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
    <modelVersion>4.0.0</modelVersion>
    <name>xebia-tomcat-extras</name>
    <groupId>fr.xebia.web.extras</groupId>
    <artifactId>xebia-servlet-extras</artifactId>
    <packaging>jar</packaging>
    <description>Extras for Servlet API</description>
-   <version>1.0.3-SNAPSHOT</version>
+   <version>1.0.3</version>
    <scm>
-      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</connection>
-      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</developerConnection>
-      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</url>
+      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.3</connection>
+      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.3</developerConnection>
+      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.3</url>
    </scm>
    <build>
       <plugins>
