@@ -851,7 +851,9 @@ public class ExpiresFilter implements Filter {
             return null;
         }
 
-        logger.trace("Use {} matching '{}' for content-type '{}'", new Object[] { configuration, matchingContentType, contentType });
+        if (logger.isTraceEnabled()) {
+            logger.trace("Use {} matching '{}' for content-type '{}'", new Object[] { configuration, matchingContentType, contentType });
+        }
 
         Calendar calendar;
         switch (configuration.getStartingPoint()) {
@@ -925,33 +927,47 @@ public class ExpiresFilter implements Filter {
      * <p>
      * Must be called on the "Start Write Response Body" event.
      * </p>
+     * <p>
+     * Invocations to {@link Logger#debug(String, Object[])} are guarded by
+     * {@link Logger#isDebugEnabled()} because
+     * {@link HttpServletRequest#getRequestURI()} and
+     * {@link HttpServletResponse#getContentType()} costs {@link String}
+     * instantiations.
+     * </p>
      */
     public void onBeforeWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
         String cacheControlHeader = response.getCacheControlHeader();
         boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
         if (expirationHeaderHasBeenSet) {
-            logger.debug("Request '{}' with response status '{}' content-type '{}‘, expiration header already defined", new Object[] {
-                    request.getRequestURI(), response.getStatus(), response.getContentType() });
+            if (logger.isDebugEnabled()) {
+                logger.debug("Request '{}' with response status '{}' content-type '{}‘, expiration header already defined", new Object[] {
+                        request.getRequestURI(), response.getStatus(), response.getContentType() });
+            }
             return;
         }
 
         for (int skippedStatusCode : this.excludedResponseStatusCodes) {
             if (response.getStatus() == skippedStatusCode) {
-                logger.debug(
-                        "Request '{}' with response status '{}' content-type '{}‘, skip expiration header generation for given status",
-                        new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                            "Request '{}' with response status '{}' content-type '{}‘, skip expiration header generation for given status",
+                            new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
+                }
                 return;
             }
         }
 
         Date expirationDate = getExpirationDate(response);
         if (expirationDate == null) {
-            logger.debug(
-                    "Request '{}' with response status '{}' content-type '{}‘ status , no expiration configured for given content-type",
-                    new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
+            if (logger.isDebugEnabled()) {
+                logger.debug("Request '{}' with response status '{}' content-type '{}‘ status , no expiration configured", new Object[] {
+                        request.getRequestURI(), response.getStatus(), response.getContentType() });
+            }
         } else {
-            logger.debug("Request '{}' with response status '{}' content-type '{}‘, set expiration date {}", new Object[] {
-                    request.getRequestURI(), response.getStatus(), response.getContentType(), expirationDate });
+            if (logger.isDebugEnabled()) {
+                logger.debug("Request '{}' with response status '{}' content-type '{}‘, set expiration date {}", new Object[] {
+                        request.getRequestURI(), response.getStatus(), response.getContentType(), expirationDate });
+            }
 
             String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
 
