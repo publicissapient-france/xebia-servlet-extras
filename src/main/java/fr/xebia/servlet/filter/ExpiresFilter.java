@@ -813,13 +813,18 @@ public class ExpiresFilter implements Filter {
     }
 
     /**
+     * <p>
      * Returns the expiration date of the given {@link XHttpServletResponse} or
      * <code>null</code> if no expiration date has been configured for the
      * declared content type.
+     * </p>
+     * <p>
+     * <code>protected</code> for extension.
+     * </p>
      * 
      * @see HttpServletResponse#getContentType()
      */
-    private Date getExpirationDate(XHttpServletResponse response) {
+    protected Date getExpirationDate(HttpServletRequest request, XHttpServletResponse response) {
         String contentType = response.getContentType();
 
         // lookup exact content-type match (e.g.
@@ -918,6 +923,37 @@ public class ExpiresFilter implements Filter {
     }
 
     /**
+     *
+     * <p>
+     * <code>protected</code> for extension.
+     * </p>
+     */
+    protected boolean isEligibleToExpirationHeaderGeneration(HttpServletRequest request, XHttpServletResponse response) {
+        boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES)
+                || contains(response.getCacheControlHeader(), "max-age");
+        if (expirationHeaderHasBeenSet) {
+            if (logger.isDebugEnabled()) {
+                logger.debug("Request '{}' with response status '{}' content-type '{}‘, expiration header already defined", new Object[] {
+                        request.getRequestURI(), response.getStatus(), response.getContentType() });
+            }
+            return false;
+        }
+
+        for (int skippedStatusCode : this.excludedResponseStatusCodes) {
+            if (response.getStatus() == skippedStatusCode) {
+                if (logger.isDebugEnabled()) {
+                    logger.debug(
+                            "Request '{}' with response status '{}' content-type '{}‘, skip expiration header generation for given status",
+                            new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
+                }
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * <p>
      * If no expiration header has been set by the servlet and an expiration has
      * been defined in the {@link ExpiresFilter} configuration, sets the
@@ -936,28 +972,12 @@ public class ExpiresFilter implements Filter {
      * </p>
      */
     public void onBeforeWriteResponseBody(HttpServletRequest request, XHttpServletResponse response) {
-        String cacheControlHeader = response.getCacheControlHeader();
-        boolean expirationHeaderHasBeenSet = response.containsHeader(HEADER_EXPIRES) || contains(cacheControlHeader, "max-age");
-        if (expirationHeaderHasBeenSet) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Request '{}' with response status '{}' content-type '{}‘, expiration header already defined", new Object[] {
-                        request.getRequestURI(), response.getStatus(), response.getContentType() });
-            }
+
+        if (!isEligibleToExpirationHeaderGeneration(request, response)) {
             return;
         }
 
-        for (int skippedStatusCode : this.excludedResponseStatusCodes) {
-            if (response.getStatus() == skippedStatusCode) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug(
-                            "Request '{}' with response status '{}' content-type '{}‘, skip expiration header generation for given status",
-                            new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
-                }
-                return;
-            }
-        }
-
-        Date expirationDate = getExpirationDate(response);
+        Date expirationDate = getExpirationDate(request, response);
         if (expirationDate == null) {
             if (logger.isDebugEnabled()) {
                 logger.debug("Request '{}' with response status '{}' content-type '{}‘ status , no expiration configured", new Object[] {
@@ -971,6 +991,7 @@ public class ExpiresFilter implements Filter {
 
             String maxAgeDirective = "max-age=" + ((expirationDate.getTime() - System.currentTimeMillis()) / 1000);
 
+            String cacheControlHeader = response.getCacheControlHeader();
             String newCacheControlHeader = (cacheControlHeader == null) ? maxAgeDirective : cacheControlHeader + ", " + maxAgeDirective;
             response.setHeader(HEADER_CACHE_CONTROL, newCacheControlHeader);
             response.setDateHeader(HEADER_EXPIRES, expirationDate.getTime());
