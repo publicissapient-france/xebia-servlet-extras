@@ -462,7 +462,7 @@ import org.slf4j.LoggerFactory;
  * 
  * <code><pre>
  * 2010/03/24 18:43:34,586 DEBUG [http-8080-1] fr.xebia.servlet.filter.ExpiresFilter - 
- *    Request &#x27;/&#x27; with response status &#x27;200&#x27; content-type &#x27;text/html‘, set expiration date Wed Mar 24 18:48:34 CET 2010
+ *    Request &#x27;/&#x27; with response status &#x27;200&#x27; content-type &#x27;text/html', set expiration date Wed Mar 24 18:48:34 CET 2010
  * </pre></code>
  * <p>
  * Sample of per-request log message where <tt>ExpiresFilter</tt> does not add
@@ -471,7 +471,7 @@ import org.slf4j.LoggerFactory;
  * 
  * <code><pre>
  * 2010/03/24 18:43:34,564 DEBUG [http-8080-2] fr.xebia.servlet.filter.ExpiresFilter - 
- *    Request &#x27;/services/helloWorldService&#x27; with response status &#x27;200&#x27; content-type &#x27;text/xml;charset=UTF-8‘ status , no expiration configured
+ *    Request &#x27;/services/helloWorldService&#x27; with response status &#x27;200&#x27; content-type &#x27;text/xml;charset=UTF-8' status , no expiration configured
  * </pre></code>
  * 
  * 
@@ -1394,7 +1394,7 @@ public class ExpiresFilter implements Filter {
                 || contains(response.getCacheControlHeader(), "max-age");
         if (expirationHeaderHasBeenSet) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Request '{}' with response status '{}' content-type '{}‘, expiration header already defined", new Object[] {
+                logger.debug("Request '{}' with response status '{}' content-type '{}', expiration header already defined", new Object[] {
                         request.getRequestURI(), response.getStatus(), response.getContentType() });
             }
             return false;
@@ -1404,7 +1404,7 @@ public class ExpiresFilter implements Filter {
             if (response.getStatus() == skippedStatusCode) {
                 if (logger.isDebugEnabled()) {
                     logger.debug(
-                            "Request '{}' with response status '{}' content-type '{}‘, skip expiration header generation for given status",
+                            "Request '{}' with response status '{}' content-type '{}', skip expiration header generation for given status",
                             new Object[] { request.getRequestURI(), response.getStatus(), response.getContentType() });
                 }
                 return false;
@@ -1441,12 +1441,12 @@ public class ExpiresFilter implements Filter {
         Date expirationDate = getExpirationDate(request, response);
         if (expirationDate == null) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Request '{}' with response status '{}' content-type '{}‘ status , no expiration configured", new Object[] {
+                logger.debug("Request '{}' with response status '{}' content-type '{}' status , no expiration configured", new Object[] {
                         request.getRequestURI(), response.getStatus(), response.getContentType() });
             }
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("Request '{}' with response status '{}' content-type '{}‘, set expiration date {}", new Object[] {
+                logger.debug("Request '{}' with response status '{}' content-type '{}', set expiration date {}", new Object[] {
                         request.getRequestURI(), response.getStatus(), response.getContentType(), expirationDate });
             }
 
