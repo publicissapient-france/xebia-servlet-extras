@@ -1441,7 +1441,7 @@ public class ExpiresFilter implements Filter {
         Date expirationDate = getExpirationDate(request, response);
         if (expirationDate == null) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Request '{}' with response status '{}' content-type '{}' status , no expiration configured", new Object[] {
+                logger.debug("Request '{}' with response status '{}' content-type '{}', no expiration configured", new Object[] {
                         request.getRequestURI(), response.getStatus(), response.getContentType() });
             }
         } else {
