@@ -1187,11 +1187,11 @@ public class ExpiresFilter implements Filter {
      * @return
      */
     protected static String substringBefore(String str, String separator) {
-        if (str == null || str.isEmpty() || separator == null) {
+        if (isEmpty(str) || separator == null) {
             return null;
         }
 
-        if (separator.isEmpty()) {
+        if (separator.length() == 0) {
             return "";
         }
 
