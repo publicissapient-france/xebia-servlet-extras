@@ -13,10 +13,16 @@
 <!--  See the License for the specific language governing permissions and      -->
 <!--  limitations under the License.                                           -->
 <!--                                                                           -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
    <modelVersion>4.0.0</modelVersion>
+   <parent>
+      <groupId>org.sonatype.oss</groupId>
+      <artifactId>oss-parent</artifactId>
+      <version>5</version>
+   </parent>
    <name>xebia-tomcat-extras</name>
-   <groupId>fr.xebia.web.extras</groupId>
+   <groupId>fr.xebia.web</groupId>
    <artifactId>xebia-servlet-extras</artifactId>
    <packaging>jar</packaging>
    <description>Extras for Servlet API</description>
@@ -37,30 +43,6 @@
             </configuration>
          </plugin>
          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <executions>
-               <execution>
-                  <id>attach-javadoc</id>
-                  <goals>
-                     <goal>jar</goal>
-                  </goals>
-               </execution>
-            </executions>
-         </plugin>
-         <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <executions>
-               <execution>
-                  <id>attach-source</id>
-                  <goals>
-                     <goal>jar</goal>
-                  </goals>
-               </execution>
-            </executions>
-         </plugin>
-         <plugin>
             <groupId>org.apache.rat</groupId>
             <artifactId>apache-rat-plugin</artifactId>
             <version>0.7</version>
@@ -74,13 +56,6 @@
             </executions>
          </plugin>
       </plugins>
-      <extensions>
-         <extension>
-            <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-webdav-jackrabbit</artifactId>
-            <version>1.0-beta-6</version>
-         </extension>
-      </extensions>
       <resources>
          <resource>
             <directory>${basedir}/src/main/resources</directory>
@@ -96,12 +71,6 @@
          </resource>
       </resources>
    </build>
-   <distributionManagement>
-      <repository>
-         <id>xebia-france.googlecode.com</id>
-         <url>dav:https://xebia-france.googlecode.com/svn/repository/maven2/</url>
-      </repository>
-   </distributionManagement>
    <dependencies>
       <dependency>
          <groupId>javax.servlet</groupId>
