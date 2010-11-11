@@ -114,6 +114,14 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
          <scope>test</scope>
       </dependency>
    </dependencies>
+   <url>http://code.google.com/p/xebia-france/wiki/XebiaServletExtras</url>
+   <developers>
+      <developer>
+         <id>1</id>
+         <name>Cyrille Le Clerc</name>
+         <email>cleclerc@xebia.fr</email>
+      </developer>
+   </developers>
    <licenses>
       <license>
          <name>Apache 2</name>
