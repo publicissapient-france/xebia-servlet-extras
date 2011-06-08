@@ -815,6 +815,7 @@ public class XForwardedFilter implements Filter {
         return httpsServerPort;
     }
     
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings("EI_EXPOSE_REP")
     public Pattern[] getInternalProxies() {
         return allowedInternalProxies;
     }
@@ -835,6 +836,7 @@ public class XForwardedFilter implements Filter {
         return remoteIPHeader;
     }
     
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings("EI_EXPOSE_REP")
     public Pattern[] getTrustedProxies() {
         return trustedProxies;
     }

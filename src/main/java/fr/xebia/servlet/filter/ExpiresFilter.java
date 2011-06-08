@@ -1265,6 +1265,7 @@ public class ExpiresFilter implements Filter {
         return intsToCommaDelimitedString(excludedResponseStatusCodes);
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings("EI_EXPOSE_REP")
     public int[] getExcludedResponseStatusCodesAsInts() {
         return excludedResponseStatusCodes;
     }
@@ -1570,6 +1571,7 @@ public class ExpiresFilter implements Filter {
         this.defaultExpiresConfiguration = defaultExpiresConfiguration;
     }
 
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings("EI_EXPOSE_REP")
     public void setExcludedResponseStatusCodes(int[] excludedResponseStatusCodes) {
         this.excludedResponseStatusCodes = excludedResponseStatusCodes;
     }
