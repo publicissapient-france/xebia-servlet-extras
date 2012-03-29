@@ -22,6 +22,7 @@ import static org.junit.Assert.assertNull;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -46,6 +47,8 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockFilterConfig;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+
+import fr.xebia.servlet.filter.XForwardedFilter.XForwardedResponse;
 
 public class XForwardedFilterTest {
     
@@ -126,8 +129,10 @@ public class XForwardedFilterTest {
         request.addHeader("x-forwarded-for", "140.211.11.130");
         request.addHeader("x-forwarded-proto", "http");
 
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
         // TEST
-        xforwardedFilter.doFilter(request, new MockHttpServletResponse(), filterChain);
+        xforwardedFilter.doFilter(request, response, filterChain);
 
         // VERIFY
         boolean actualSecure = filterChain.getRequest().isSecure();
@@ -141,6 +146,22 @@ public class XForwardedFilterTest {
 
         String actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
         assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+
+        String actualUrl = ((HttpServletResponse) filterChain.getResponse())
+            .encodeURL("/relativeURL");
+        assertEquals("encodeURL relative", "http://localhost/relativeURL", actualUrl);
+
+        actualUrl = ((HttpServletResponse) filterChain.getResponse())
+            .encodeURL("https://absolute/URL");
+        assertEquals("encodeURL absolute", "https://absolute/URL", actualUrl);
+
+        String actualRedirectUrl = ((HttpServletResponse) filterChain.getResponse())
+            .encodeRedirectURL("/relativeURL");
+        assertEquals("encodeRedirectURL relative", "http://localhost/relativeURL",
+            actualRedirectUrl);
+
+        ((HttpServletResponse) filterChain.getResponse()).sendRedirect("/relativeURL");
+        assertEquals("redirectedUrl", "http://localhost/relativeURL", response.getRedirectedUrl());
     }
 
     @Test
@@ -162,8 +183,10 @@ public class XForwardedFilterTest {
         request.addHeader("x-my-forwarded-for", "140.211.11.130");
         request.addHeader("x-forwarded-proto", "http");
 
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
         // TEST
-        xforwardedFilter.doFilter(request, new MockHttpServletResponse(), filterChain);
+        xforwardedFilter.doFilter(request, response, filterChain);
 
         // VERIFY
         boolean actualSecure = filterChain.getRequest().isSecure();
@@ -180,6 +203,9 @@ public class XForwardedFilterTest {
 
         String actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
         assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+
+        ((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
+        assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
     }
 
     @Test
@@ -465,6 +491,9 @@ public class XForwardedFilterTest {
         XForwardedFilter xforwardedFilter = new XForwardedFilter();
         MockFilterConfig filterConfig = new MockFilterConfig();
         filterConfig.addInitParameter(XForwardedFilter.PROTOCOL_HEADER_PARAMETER, "x-forwarded-proto");
+        // Following is needed on ipv6 stacks..
+        filterConfig.addInitParameter(XForwardedFilter.INTERNAL_PROXIES_PARAMETER, 
+        	InetAddress.getByName("localhost").getHostAddress());
         xforwardedFilter.init(filterConfig);
         context.addFilter(new FilterHolder(xforwardedFilter), "/*", Handler.REQUEST);
         
@@ -497,4 +526,29 @@ public class XForwardedFilterTest {
             server.stop();
         }
     }
+    
+    @Test
+    public void testToAbsoluteInResponse() {
+        // PREPARE
+        XForwardedFilter xFilter = new XForwardedFilter();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        HttpServletResponse mockResponse = new MockHttpServletResponse();
+        XForwardedResponse response = xFilter.new XForwardedResponse(mockResponse, request);
+        request.setScheme("http");
+        request.setServerName("localhost");
+        request.setServerPort(80);
+        request.setContextPath("/context");
+        request.setRequestURI("/context/dir/test");
+
+        // TEST and VERIFY
+        assertEquals("relative uri", "http://localhost/context/dir/relativeURI",
+            response.toAbsolute("relativeURI"));
+        assertEquals("relative to host uri", "http://localhost/relativeURI",
+            response.toAbsolute("/relativeURI"));
+        assertEquals("relative to context root uri", "http://localhost/context/relativeURI",
+            response.toAbsolute(request.getContextPath() + "/relativeURI"));
+        assertEquals("absolute uri", "https://server/othercontext/uri",
+            response.toAbsolute("https://server/othercontext/uri"));
+    }
+    
 }

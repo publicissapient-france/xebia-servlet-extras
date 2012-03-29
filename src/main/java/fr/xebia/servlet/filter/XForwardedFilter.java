@@ -41,6 +41,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -585,7 +586,97 @@ public class XForwardedFilter implements Filter {
             this.serverPort = serverPort;
         }
     }
-    
+
+    public class XForwardedResponse extends HttpServletResponseWrapper {
+
+        private HttpServletRequest xRequest;
+
+        public XForwardedResponse(HttpServletResponse response, HttpServletRequest xRequest) {
+            super(response);
+            this.xRequest = xRequest;
+        }
+
+        @Override
+        public void sendRedirect(String location) throws IOException {
+            super.sendRedirect(toAbsolute(location));
+        }
+
+        @Override
+        public String encodeURL(String url) {
+            return super.encodeURL(toAbsolute(url));
+        }
+
+        @Override
+        public String encodeRedirectURL(String url) {
+            return super.encodeRedirectURL(toAbsolute(url));
+        }
+
+        /**
+         * Builds up an absolute URL based on the (wrapped) request and thereby enabling
+         * the x-forwarded-proto and x-forwarded-by headers.
+         * 
+         * @param location
+         * @return absolute url; in case this was not possible the original location is
+         *         returned
+         */
+        protected String toAbsolute(String location) {
+            String url = location;
+            boolean leadingSlash = url.startsWith("/");
+            StringBuilder urlBuilder = new StringBuilder();
+            if (leadingSlash || !hasScheme(url)) {
+                String scheme = xRequest.getScheme();
+                String name = xRequest.getServerName();
+                int port = xRequest.getServerPort();
+                urlBuilder.append(scheme);
+                urlBuilder.append("://");
+                urlBuilder.append(name);
+                if ((scheme.equals("http") && port != 80)
+                    || (scheme.equals("https") && port != 443)) {
+                    urlBuilder.append(':');
+                    urlBuilder.append(port);
+                }
+                if (!leadingSlash) {
+                    String requestURI = xRequest.getRequestURI();
+                    int pos = requestURI.lastIndexOf("/");
+                    requestURI = requestURI.substring(0, pos);
+                    urlBuilder.append(requestURI);
+                    urlBuilder.append("/");
+                }
+                urlBuilder.append(url);
+                url = urlBuilder.toString();
+            }
+            return url;
+        }
+
+        /**
+         * Determine if a URI string has a <code>scheme</code> component.
+         * 
+         * Copied from {@link org.apache.catalina.connector.Response}.
+         */
+        private boolean hasScheme(String uri) {
+            int len = uri.length();
+            for (int i = 0; i < len; i++) {
+                char c = uri.charAt(i);
+                if (c == ':') {
+                    return i > 0;
+                }
+                else if (!isSchemeChar(c)) {
+                    return false;
+                }
+            }
+            return false;
+        }
+
+        /**
+         * Determine if the character is allowed in the scheme of a URI. See RFC 2396,
+         * Section 3.1
+         */
+        private boolean isSchemeChar(char c) {
+            return Character.isLetterOrDigit(c) || c == '+' || c == '-' || c == '.';
+        }
+
+    }
+
     /**
      * {@link Pattern} for a comma delimited string that support whitespace characters
      */
@@ -744,6 +835,7 @@ public class XForwardedFilter implements Filter {
             }
             
             XForwardedRequest xRequest = new XForwardedRequest(request);
+            XForwardedResponse xResponse = new XForwardedResponse(response, xRequest);
             if (remoteIp != null) {
                 
                 xRequest.setRemoteAddr(remoteIp);
@@ -780,16 +872,20 @@ public class XForwardedFilter implements Filter {
             }
             
             if (logger.isDebugEnabled()) {
-                logger.debug("Incoming request " + request.getRequestURI() + " with originalRemoteAddr '" + request.getRemoteAddr()
-                        + "', originalRemoteHost='" + request.getRemoteHost() + "', originalSecure='" + request.isSecure()
-                        + "', originalScheme='" + request.getScheme() + "', original[" + remoteIPHeader + "]='"
-                        + request.getHeader(remoteIPHeader) + ", original[" + protocolHeader + "]='"
-                        + (protocolHeader == null ? null : request.getHeader(protocolHeader)) + "' will be seen as newRemoteAddr='"
-                        + xRequest.getRemoteAddr() + "', newRemoteHost='" + xRequest.getRemoteHost() + "', newScheme='"
-                        + xRequest.getScheme() + "', newSecure='" + xRequest.isSecure() + "', new[" + remoteIPHeader + "]='"
-                        + xRequest.getHeader(remoteIPHeader) + ", new[" + proxiesHeader + "]='" + xRequest.getHeader(proxiesHeader) + "'");
+                logger.debug("Incoming request " + request.getRequestURI()
+                    + " with originalRemoteAddr '" + request.getRemoteAddr()
+                    + "', originalRemoteHost='" + request.getRemoteHost() + "', originalSecure='"
+                    + request.isSecure() + "', originalScheme='" + request.getScheme()
+                    + "', original[" + remoteIPHeader + "]='" + request.getHeader(remoteIPHeader)
+                    + ", original[" + protocolHeader + "]='"
+                    + (protocolHeader == null ? null : request.getHeader(protocolHeader))
+                    + "' will be seen as newRemoteAddr='" + xRequest.getRemoteAddr()
+                    + "', newRemoteHost='" + xRequest.getRemoteHost() + "', newScheme='"
+                    + xRequest.getScheme() + "', newSecure='" + xRequest.isSecure() + "', new["
+                    + remoteIPHeader + "]='" + xRequest.getHeader(remoteIPHeader) + ", new["
+                    + proxiesHeader + "]='" + xRequest.getHeader(proxiesHeader) + "'");
             }
-            chain.doFilter(xRequest, response);
+            chain.doFilter(xRequest, xResponse);
         } else {
             if (logger.isDebugEnabled()) {
                 logger.debug("Skip XForwardedFilter for request " + request.getRequestURI() + " with remote address "
