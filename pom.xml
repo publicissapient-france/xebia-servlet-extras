@@ -13,8 +13,7 @@
 <!--  See the License for the specific language governing permissions and      -->
 <!--  limitations under the License.                                           -->
 <!--                                                                           -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
    <modelVersion>4.0.0</modelVersion>
    <parent>
       <groupId>org.sonatype.oss</groupId>
@@ -26,11 +25,11 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/ma
    <artifactId>xebia-servlet-extras</artifactId>
    <packaging>jar</packaging>
    <description>Extras for Servlet API</description>
-   <version>1.0.6-SNAPSHOT</version>
+   <version>1.0.6</version>
    <scm>
-      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</connection>
-      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</developerConnection>
-      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</url>
+      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.6</connection>
+      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.6</developerConnection>
+      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/tags/xebia-servlet-extras-1.0.6</url>
    </scm>
    <build>
       <plugins>
