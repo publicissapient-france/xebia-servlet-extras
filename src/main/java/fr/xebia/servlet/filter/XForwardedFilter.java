@@ -612,9 +612,13 @@ public class XForwardedFilter implements Filter {
         }
 
         /**
+         * <p>
          * Builds up an absolute URL based on the (wrapped) request and thereby enabling
          * the x-forwarded-proto and x-forwarded-by headers.
-         * 
+         * </p>
+         * <p>
+         * Copied from {@link org.apache.catalina.connector.Response}.
+         * </p>
          * @param location
          * @return absolute url; in case this was not possible the original location is
          *         returned
@@ -649,9 +653,12 @@ public class XForwardedFilter implements Filter {
         }
 
         /**
+         * <p>
          * Determine if a URI string has a <code>scheme</code> component.
-         * 
+         * </p>
+         * <p>
          * Copied from {@link org.apache.catalina.connector.Response}.
+         * </p>
          */
         private boolean hasScheme(String uri) {
             int len = uri.length();
@@ -668,8 +675,13 @@ public class XForwardedFilter implements Filter {
         }
 
         /**
+         * <p>
          * Determine if the character is allowed in the scheme of a URI. See RFC 2396,
          * Section 3.1
+         * </p>
+         * <p>
+         * Copied from {@link org.apache.catalina.connector.Response}.
+         * </p>
          */
         private boolean isSchemeChar(char c) {
             return Character.isLetterOrDigit(c) || c == '+' || c == '-' || c == '.';
@@ -872,8 +884,8 @@ public class XForwardedFilter implements Filter {
             }
             
             if (logger.isDebugEnabled()) {
-                logger.debug("Incoming request " + request.getRequestURI()
-                    + " with originalRemoteAddr '" + request.getRemoteAddr()
+                logger.debug("Incoming request '" + request.getRequestURI()
+                    + "' with originalRemoteAddr '" + request.getRemoteAddr()
                     + "', originalRemoteHost='" + request.getRemoteHost() + "', originalSecure='"
                     + request.isSecure() + "', originalScheme='" + request.getScheme()
                     + "', original[" + remoteIPHeader + "]='" + request.getHeader(remoteIPHeader)
@@ -888,7 +900,7 @@ public class XForwardedFilter implements Filter {
             chain.doFilter(xRequest, xResponse);
         } else {
             if (logger.isDebugEnabled()) {
-                logger.debug("Skip XForwardedFilter for request " + request.getRequestURI() + " with remote address "
+                logger.debug("Skip XForwardedFilter for request '" + request.getRequestURI() + "' with remote address "
                         + request.getRemoteAddr());
             }
             chain.doFilter(request, response);
