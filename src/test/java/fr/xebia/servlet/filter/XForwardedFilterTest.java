@@ -527,6 +527,101 @@ public class XForwardedFilterTest {
         }
     }
     
+    /**
+     * Test {@link XForwardedFilter} in Jetty
+     */
+    @Test
+    public void test302RelativeRedirectWithJetty() throws Exception {
+        String sendRedirectLocation = "relative-url";
+        String expectedLocation = "https://localhost/relative-url";
+
+        
+        test302RedirectWithJetty(sendRedirectLocation, expectedLocation, 443);
+    }
+    
+    /**
+     * Test {@link XForwardedFilter} in Jetty
+     */
+    @Test
+    public void test302RootRelativeRedirectWithJetty() throws Exception {
+        String sendRedirectLocation = "/my/relative-url";
+        String expectedLocation = "https://localhost/my/relative-url";
+
+        
+        test302RedirectWithJetty(sendRedirectLocation, expectedLocation, 443);
+    }
+
+    /**
+     * Test {@link XForwardedFilter} in Jetty
+     */
+    @Test
+    public void test302RootRelativeRedirectAlternateSslPortWithJetty() throws Exception {
+        String sendRedirectLocation = "/my/relative-url";
+        String expectedLocation = "https://localhost:444/my/relative-url";
+
+        
+        test302RedirectWithJetty(sendRedirectLocation, expectedLocation, 444);
+    }
+
+    /**
+     * Test {@link XForwardedFilter} in Jetty
+     */
+    @Test
+    public void test302AbsoluteRedirectWithJetty() throws Exception {
+        String sendRedirectLocation = "http://www.apache.org";
+        String expectedLocation = "http://www.apache.org";
+
+        
+        test302RedirectWithJetty(sendRedirectLocation, expectedLocation, 443);
+    }
+
+    private void test302RedirectWithJetty(final String sendRedirectLocation, String expectedLocation, int httpsServerPortParameter) throws Exception {
+        // SETUP
+        int port = 6666;
+        Server server = new Server(port);
+        Context context = new Context(server, "/", Context.SESSIONS);
+
+        // mostly default configuration : enable "x-forwarded-proto"
+        XForwardedFilter xforwardedFilter = new XForwardedFilter();
+        MockFilterConfig filterConfig = new MockFilterConfig();
+        filterConfig.addInitParameter(XForwardedFilter.PROTOCOL_HEADER_PARAMETER, "x-forwarded-proto");
+        filterConfig.addInitParameter(XForwardedFilter.HTTPS_SERVER_PORT_PARAMETER, String.valueOf(httpsServerPortParameter));
+        // Following is needed on ipv6 stacks..
+        filterConfig.addInitParameter(XForwardedFilter.INTERNAL_PROXIES_PARAMETER, InetAddress.getByName("localhost").getHostAddress());
+        xforwardedFilter.init(filterConfig);
+        context.addFilter(new FilterHolder(xforwardedFilter), "/*", Handler.REQUEST);
+
+        HttpServlet mockServlet = new HttpServlet() {
+
+            private static final long serialVersionUID = 1L;
+
+                @Override
+                public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+                    response.sendRedirect(sendRedirectLocation);
+                }
+            
+        };
+        context.addServlet(new ServletHolder(mockServlet), "/test");
+
+        server.start();
+        try {
+            // TEST
+            HttpURLConnection httpURLConnection = (HttpURLConnection) new URL("http://localhost:" + port + "/test").openConnection();
+            httpURLConnection.setInstanceFollowRedirects(false);
+            String expectedRemoteAddr = "my-remote-addr";
+            httpURLConnection.addRequestProperty("x-forwarded-for", expectedRemoteAddr);
+            httpURLConnection.addRequestProperty("x-forwarded-proto", "https");
+
+            // VALIDATE
+            Assert.assertEquals(HttpURLConnection.HTTP_MOVED_TEMP, httpURLConnection.getResponseCode());
+            String actualLocation = httpURLConnection.getHeaderField("Location");
+            assertEquals(expectedLocation, actualLocation);
+
+        } finally {
+            server.stop();
+        }
+    }
+    
     @Test
     public void testToAbsoluteInResponse() {
         // PREPARE
