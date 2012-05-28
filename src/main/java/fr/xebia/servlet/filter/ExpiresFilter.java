@@ -1530,7 +1530,7 @@ public class ExpiresFilter implements Filter {
                 throw new IllegalStateException("Duration unit not found after amount " + amount + " in directive '" + line + "'");
             }
             DurationUnit durationUnit;
-            if ("years".equalsIgnoreCase(currentToken)) {
+            if ("year".equalsIgnoreCase(currentToken) || "years".equalsIgnoreCase(currentToken)) {
                 durationUnit = DurationUnit.YEAR;
             } else if ("month".equalsIgnoreCase(currentToken) || "months".equalsIgnoreCase(currentToken)) {
                 durationUnit = DurationUnit.MONTH;

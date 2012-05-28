@@ -51,6 +51,7 @@ public class ExpiresFilterTest {
     public void testConfiguration() throws ServletException {
         MockFilterConfig filterConfig = new MockFilterConfig();
         filterConfig.addInitParameter("ExpiresDefault", "access plus 1 month");
+        filterConfig.addInitParameter("ExpiresByType text/javascript", "access plus 1 year");
         filterConfig.addInitParameter("ExpiresByType text/html", "access plus 1 month 15 days 2 hours");
         filterConfig.addInitParameter("ExpiresByType image/gif", "modification plus 5 hours 3 minutes");
         filterConfig.addInitParameter("ExpiresByType image/jpg", "A10000");
@@ -80,6 +81,18 @@ public class ExpiresFilterTest {
             Assert.assertEquals(1, expiresConfiguration.getDurations().get(0).getAmount());
         }
 
+        // VERIFY TEXT/JAVASCRIPT
+        {
+            ExpiresConfiguration expiresConfiguration = expiresFilter.getExpiresConfigurationByContentType().get("text/javascript");
+            Assert.assertEquals(StartingPoint.ACCESS_TIME, expiresConfiguration.getStartingPoint());
+
+            Assert.assertEquals(1, expiresConfiguration.getDurations().size());
+
+            Duration oneYear = expiresConfiguration.getDurations().get(0);
+            Assert.assertEquals(DurationUnit.YEAR, oneYear.getUnit());
+            Assert.assertEquals(1, oneYear.getAmount());
+
+        }
         // VERIFY TEXT/HTML
         {
             ExpiresConfiguration expiresConfiguration = expiresFilter.getExpiresConfigurationByContentType().get("text/html");
