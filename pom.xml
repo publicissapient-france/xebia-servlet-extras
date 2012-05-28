@@ -44,13 +44,20 @@
          <plugin>
             <groupId>org.apache.rat</groupId>
             <artifactId>apache-rat-plugin</artifactId>
-            <version>0.7</version>
+            <version>0.8</version>
             <executions>
                <execution>
                   <phase>verify</phase>
                   <goals>
                      <goal>check</goal>
                   </goals>
+                  <configuration>
+                     <excludes>
+                        <exclude>.idea/**</exclude>
+                        <exclude>.git/**</exclude>
+                        <exclude>.gitignore</exclude>
+                     </excludes>
+                  </configuration>
                </execution>
             </executions>
          </plugin>
