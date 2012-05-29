@@ -25,7 +25,7 @@
    <artifactId>xebia-servlet-extras</artifactId>
    <packaging>jar</packaging>
    <description>Extras for Servlet API</description>
-   <version>1.0.7-SNAPSHOT</version>
+   <version>1.0.7</version>
    <scm>
       <connection>scm:git:git@github.com:xebia-france/xebia-servlet-extras.git</connection>
       <developerConnection>scm:git:git@github.com:xebia-france/xebia-servlet-extras.git</developerConnection>
