@@ -27,9 +27,9 @@
    <description>Extras for Servlet API</description>
    <version>1.0.7-SNAPSHOT</version>
    <scm>
-      <connection>scm:svn:http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</connection>
-      <developerConnection>scm:svn:https://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</developerConnection>
-      <url>http://xebia-france.googlecode.com/svn/web/xebia-servlet-extras/trunk</url>
+      <connection>scm:git:git@github.com:xebia-france/xebia-servlet-extras.git</connection>
+      <developerConnection>scm:git:git@github.com:xebia-france/xebia-servlet-extras.git</developerConnection>
+      <url>https://github.com/xebia-france/xebia-servlet-extras</url>
    </scm>
    <build>
       <plugins>
