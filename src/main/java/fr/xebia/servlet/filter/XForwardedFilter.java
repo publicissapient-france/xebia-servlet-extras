@@ -617,7 +617,7 @@ public class XForwardedFilter implements Filter {
          * the x-forwarded-proto and x-forwarded-by headers.
          * </p>
          * <p>
-         * Copied from {@link org.apache.catalina.connector.Response}.
+         * Copied from <code>org.apache.catalina.connector.Response</code>.
          * </p>
          * @param location
          * @return absolute url; in case this was not possible the original location is
@@ -657,7 +657,7 @@ public class XForwardedFilter implements Filter {
          * Determine if a URI string has a <code>scheme</code> component.
          * </p>
          * <p>
-         * Copied from {@link org.apache.catalina.connector.Response}.
+         * Copied from <code>org.apache.catalina.connector.Response</code>.
          * </p>
          */
         private boolean hasScheme(String uri) {
@@ -680,7 +680,7 @@ public class XForwardedFilter implements Filter {
          * Section 3.1
          * </p>
          * <p>
-         * Copied from {@link org.apache.catalina.connector.Response}.
+         * Copied from <code>org.apache.catalina.connector.Response</code>.
          * </p>
          */
         private boolean isSchemeChar(char c) {
@@ -706,9 +706,15 @@ public class XForwardedFilter implements Filter {
     private static final Logger logger = LoggerFactory.getLogger(XForwardedFilter.class);
     
     protected static final String PROTOCOL_HEADER_PARAMETER = "protocolHeader";
-    
+
+    /**
+     * @Deprecated use {@link #PROTOCOL_HEADER_HTTPS_VALUE_PARAMETER}
+     */
+    @Deprecated
     protected static final String PROTOCOL_HEADER_SSL_VALUE_PARAMETER = "protocolHeaderSslValue";
-    
+
+    protected static final String PROTOCOL_HEADER_HTTPS_VALUE_PARAMETER = "protocolHeaderHttpsValue";
+
     protected static final String PROXIES_HEADER_PARAMETER = "proxiesHeader";
     
     protected static final String REMOTE_IP_HEADER_PARAMETER = "remoteIPHeader";
@@ -786,7 +792,7 @@ public class XForwardedFilter implements Filter {
     private int httpsServerPort = 443;
 
     /**
-     * @see #setInternalProxies(String)
+     * @see #setAllowedInternalProxies(String)
      */
     private Pattern[] allowedInternalProxies = new Pattern[] { Pattern.compile("10\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"),
             Pattern.compile("192\\.168\\.\\d{1,3}\\.\\d{1,3}"), Pattern.compile("172\\.(?:1[6-9]|2\\d|3[0-1]).\\d{1,3}.\\d{1,3}"), 
@@ -797,7 +803,7 @@ public class XForwardedFilter implements Filter {
      */
     private String protocolHeader = null;
     
-    private String protocolHeaderSslValue = "https";
+    private String protocolHeaderHttpsValue = "https";
     
     /**
      * @see #setProxiesHeader(String)
@@ -871,7 +877,7 @@ public class XForwardedFilter implements Filter {
                 String protocolHeaderValue = request.getHeader(protocolHeader);
                 if (protocolHeaderValue == null) {
                     // don't modify the secure,scheme and serverPort attributes of the request
-                } else if (protocolHeaderSslValue.equalsIgnoreCase(protocolHeaderValue)) {
+                } else if (protocolHeaderHttpsValue.equalsIgnoreCase(protocolHeaderValue)) {
                     xRequest.setSecure(true);
                     xRequest.setScheme("https");
                     xRequest.setServerPort(httpsServerPort);
@@ -930,9 +936,17 @@ public class XForwardedFilter implements Filter {
     public String getProtocolHeader() {
         return protocolHeader;
     }
-    
+
+    /**
+     * @deprecated use {@link #getProtocolHeaderHttpsValue()}
+     */
+    @Deprecated
     public String getProtocolHeaderSslValue() {
-        return protocolHeaderSslValue;
+        return getProtocolHeaderHttpsValue();
+    }
+
+    public String getProtocolHeaderHttpsValue() {
+        return protocolHeaderHttpsValue;
     }
     
     public String getProxiesHeader() {
@@ -957,7 +971,13 @@ public class XForwardedFilter implements Filter {
         }
 
         if (filterConfig.getInitParameter(PROTOCOL_HEADER_SSL_VALUE_PARAMETER) != null) {
+            logger.info("Parameter '" + PROTOCOL_HEADER_SSL_VALUE_PARAMETER + "' is deprecated, use '"
+                    + PROTOCOL_HEADER_HTTPS_VALUE_PARAMETER + "' instead.");
             setProtocolHeaderSslValue(filterConfig.getInitParameter(PROTOCOL_HEADER_SSL_VALUE_PARAMETER));
+        }
+
+        if(filterConfig.getInitParameter(PROTOCOL_HEADER_HTTPS_VALUE_PARAMETER) != null) {
+            setProtocolHeaderHttpsValue(filterConfig.getInitParameter(PROTOCOL_HEADER_HTTPS_VALUE_PARAMETER));
         }
 
         if (filterConfig.getInitParameter(PROXIES_HEADER_PARAMETER) != null) {
@@ -1046,9 +1066,24 @@ public class XForwardedFilter implements Filter {
      * <p>
      * Default value : <code>HTTPS</code>
      * </p>
+     *
+     * @deprecated use {@link #setProtocolHeaderHttpsValue(String)}}
      */
+    @Deprecated
     public void setProtocolHeaderSslValue(String protocolHeaderSslValue) {
-        this.protocolHeaderSslValue = protocolHeaderSslValue;
+        setProtocolHeaderHttpsValue(protocolHeaderSslValue);
+    }
+
+    /**
+     * <p>
+     * Case insensitive value of the protocol header to indicate that the incoming http request uses SSL.
+     * </p>
+     * <p>
+     * Default value : <code>HTTPS</code>
+     * </p>
+     */
+    public void setProtocolHeaderHttpsValue(String protocolHeaderHttpsValue) {
+        this.protocolHeaderHttpsValue = protocolHeaderHttpsValue;
     }
     
     /**

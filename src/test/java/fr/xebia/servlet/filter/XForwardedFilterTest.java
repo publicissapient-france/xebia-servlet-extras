@@ -197,7 +197,56 @@ public class XForwardedFilterTest {
 
         int actualServerPort = filterChain.getRequest().getServerPort();
         assertEquals("wrong http server port", 8080, actualServerPort);
-        
+
+        String actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
+        assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
+
+        String actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
+        assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+
+        ((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
+        assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
+    }
+
+    /**
+     * Use <code>X-Real-IP</code> and <code>X-Secure</code> headers.
+     *
+     * @throws Exception
+     */
+    @Test
+    public void testNGinxStyleIncomingRequest() throws Exception {
+        // PREPARE
+        XForwardedFilter xforwardedFilter = new XForwardedFilter();
+        MockFilterConfig filterConfig = new MockFilterConfig();
+        filterConfig.addInitParameter(XForwardedFilter.PROTOCOL_HEADER_PARAMETER, "X-Secure");
+        filterConfig.addInitParameter(XForwardedFilter.PROTOCOL_HEADER_HTTPS_VALUE_PARAMETER, "on");
+        filterConfig.addInitParameter(XForwardedFilter.REMOTE_IP_HEADER_PARAMETER, "X-Real-IP");
+
+        xforwardedFilter.init(filterConfig);
+        MockFilterChain filterChain = new MockFilterChain();
+        MockHttpServletRequest request = new MockHttpServletRequest();
+
+        request.setRemoteAddr("192.168.0.10");
+        request.setSecure(false);
+        request.setScheme("http");
+        request.addHeader("X-Real-IP", "140.211.11.130");
+        request.addHeader("X-Secure", "on");
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // TEST
+        xforwardedFilter.doFilter(request, response, filterChain);
+
+        // VERIFY
+        boolean actualSecure = filterChain.getRequest().isSecure();
+        assertEquals("request must be secured as header X-Secure='on'", true, actualSecure);
+
+        String actualScheme = filterChain.getRequest().getScheme();
+        assertEquals("scheme must be https as header X-Secure='on'", "https", actualScheme);
+
+        int actualServerPort = filterChain.getRequest().getServerPort();
+        assertEquals("wrong http server port", 443, actualServerPort);
+
         String actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
         assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
 
