@@ -522,14 +522,18 @@ public class ExpiresFilter implements Filter {
     protected enum DurationUnit {
         DAY(Calendar.DAY_OF_YEAR), HOUR(Calendar.HOUR), MINUTE(Calendar.MINUTE), MONTH(Calendar.MONTH), SECOND(Calendar.SECOND), WEEK(
                 Calendar.WEEK_OF_YEAR), YEAR(Calendar.YEAR);
-        private final int calendardField;
+        private final int calendarField;
 
         private DurationUnit(int calendardField) {
-            this.calendardField = calendardField;
+            this.calendarField = calendardField;
         }
 
-        public int getCalendardField() {
-            return calendardField;
+        /**
+         * @see Calendar#get(int)
+         * @return
+         */
+        public int getCalendarField() {
+            return calendarField;
         }
 
     }
@@ -1336,7 +1340,7 @@ public class ExpiresFilter implements Filter {
             throw new IllegalStateException("Unsupported startingPoint '" + configuration.getStartingPoint() + "'");
         }
         for (Duration duration : configuration.getDurations()) {
-            calendar.add(duration.getUnit().getCalendardField(), duration.getAmount());
+            calendar.add(duration.getUnit().getCalendarField(), duration.getAmount());
         }
 
         return calendar.getTime();
