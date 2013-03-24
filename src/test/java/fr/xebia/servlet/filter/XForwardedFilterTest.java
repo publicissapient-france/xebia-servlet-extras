@@ -257,146 +257,146 @@ public class XForwardedFilterTest {
         assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
 	}
 
-	/**
-	 * @throws Exception
-	 */
-	@Test
-	public void testDefaultsIncomingRequest() throws Exception {
-		// PREPARE
-		XForwardedFilter xforwardedFilter = new XForwardedFilter();
+    /**
+     * @throws Exception
+     */
+    @Test
+    public void testDefaultsIncomingRequest() throws Exception {
+        // PREPARE
+        XForwardedFilter xforwardedFilter = new XForwardedFilter();
 
-		MockFilterChain filterChain = new MockFilterChain();
-		MockHttpServletRequest request = new MockHttpServletRequest();
+        MockFilterChain filterChain = new MockFilterChain();
+        MockHttpServletRequest request = new MockHttpServletRequest();
 
-		request.setRemoteAddr("192.168.0.10");
-		request.setSecure(false);
-		request.setScheme("http");
-		request.addHeader("X-Forwarded-For", "140.211.11.130");
-		request.addHeader("X-Forwarded-Proto", "https");
+        request.setRemoteAddr("192.168.0.10");
+        request.setSecure(false);
+        request.setScheme("http");
+        request.addHeader("X-Forwarded-For", "140.211.11.130");
+        request.addHeader("X-Forwarded-Proto", "https");
 
-		MockHttpServletResponse response = new MockHttpServletResponse();
+        MockHttpServletResponse response = new MockHttpServletResponse();
 
-		// TEST
-		xforwardedFilter.doFilter(request, response, filterChain);
+        // TEST
+        xforwardedFilter.doFilter(request, response, filterChain);
 
-		// VERIFY
-		boolean actualSecure = filterChain.getRequest().isSecure();
-		assertEquals("request must be secured as header X-Forwarded-Proto='https'", true, actualSecure);
+        // VERIFY
+        boolean actualSecure = filterChain.getRequest().isSecure();
+        assertEquals("request must be secured as header X-Forwarded-Proto='https'", true, actualSecure);
 
-		String actualScheme = filterChain.getRequest().getScheme();
-		assertEquals("scheme must be https as header X-Forwarded-Proto='https'", "https", actualScheme);
+        String actualScheme = filterChain.getRequest().getScheme();
+        assertEquals("scheme must be https as header X-Forwarded-Proto='https'", "https", actualScheme);
 
-		int actualServerPort = filterChain.getRequest().getServerPort();
-		assertEquals("wrong http server port", 443, actualServerPort);
+        int actualServerPort = filterChain.getRequest().getServerPort();
+        assertEquals("wrong http server port", 443, actualServerPort);
 
-		String actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
-		assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
+        String actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
+        assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
 
-		String actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
-		assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+        String actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
+        assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
 
-		((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
-		assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
+        ((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
+        assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
 
-		filterChain = new MockFilterChain();
-		request = new MockHttpServletRequest();
+        filterChain = new MockFilterChain();
+        request = new MockHttpServletRequest();
 
-		request.setRemoteAddr("192.168.0.10");
-		request.setSecure(false);
-		request.setScheme("http");
-		request.addHeader("X-Forwarded-For", "140.211.11.130");
-		request.addHeader("X-Forwarded-Ssl", "on");
+        request.setRemoteAddr("192.168.0.10");
+        request.setSecure(false);
+        request.setScheme("http");
+        request.addHeader("X-Forwarded-For", "140.211.11.130");
+        request.addHeader("X-Forwarded-Ssl", "on");
 
-		response = new MockHttpServletResponse();
+        response = new MockHttpServletResponse();
 
-		// TEST
-		xforwardedFilter.doFilter(request, response, filterChain);
+        // TEST
+        xforwardedFilter.doFilter(request, response, filterChain);
 
-		// VERIFY
-		actualSecure = filterChain.getRequest().isSecure();
-		assertEquals("request must be secured as header X-Forwarded-Ssl='on'", true, actualSecure);
+        // VERIFY
+        actualSecure = filterChain.getRequest().isSecure();
+        assertEquals("request must be secured as header X-Forwarded-Ssl='on'", true, actualSecure);
 
-		actualScheme = filterChain.getRequest().getScheme();
-		assertEquals("scheme must be https as header X-Forwarded-Ssl='on'", "https", actualScheme);
+        actualScheme = filterChain.getRequest().getScheme();
+        assertEquals("scheme must be https as header X-Forwarded-Ssl='on'", "https", actualScheme);
 
-		actualServerPort = filterChain.getRequest().getServerPort();
-		assertEquals("wrong http server port", 443, actualServerPort);
+        actualServerPort = filterChain.getRequest().getServerPort();
+        assertEquals("wrong http server port", 443, actualServerPort);
 
-		actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
-		assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
+        actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
+        assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
 
-		actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
-		assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+        actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
+        assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
 
-		((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
-		assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
+        ((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
+        assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
 
-		filterChain = new MockFilterChain();
-		request = new MockHttpServletRequest();
+        filterChain = new MockFilterChain();
+        request = new MockHttpServletRequest();
 
-		request.setRemoteAddr("192.168.0.10");
-		request.setSecure(false);
-		request.setScheme("http");
-		request.addHeader("X-Forwarded-For", "140.211.11.130");
-		request.addHeader("Front-End-Https", "on");
+        request.setRemoteAddr("192.168.0.10");
+        request.setSecure(false);
+        request.setScheme("http");
+        request.addHeader("X-Forwarded-For", "140.211.11.130");
+        request.addHeader("Front-End-Https", "on");
 
-		response = new MockHttpServletResponse();
+        response = new MockHttpServletResponse();
 
-		// TEST
-		xforwardedFilter.doFilter(request, response, filterChain);
+        // TEST
+        xforwardedFilter.doFilter(request, response, filterChain);
 
-		// VERIFY
-		actualSecure = filterChain.getRequest().isSecure();
-		assertEquals("request must be secured as header Front-End-Https='on'", true, actualSecure);
+        // VERIFY
+        actualSecure = filterChain.getRequest().isSecure();
+        assertEquals("request must be secured as header Front-End-Https='on'", true, actualSecure);
 
-		actualScheme = filterChain.getRequest().getScheme();
-		assertEquals("scheme must be https as header Front-End-Https='on'", "https", actualScheme);
+        actualScheme = filterChain.getRequest().getScheme();
+        assertEquals("scheme must be https as header Front-End-Https='on'", "https", actualScheme);
 
-		actualServerPort = filterChain.getRequest().getServerPort();
-		assertEquals("wrong http server port", 443, actualServerPort);
+        actualServerPort = filterChain.getRequest().getServerPort();
+        assertEquals("wrong http server port", 443, actualServerPort);
 
-		actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
-		assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
+        actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
+        assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
 
-		actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
-		assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+        actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
+        assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
 
-		((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
-		assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
+        ((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
+        assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
 
-		filterChain = new MockFilterChain();
-		request = new MockHttpServletRequest();
+        filterChain = new MockFilterChain();
+        request = new MockHttpServletRequest();
 
-		request.setRemoteAddr("192.168.0.10");
-		request.setSecure(false);
-		request.setScheme("http");
-		request.addHeader("X-Forwarded-For", "140.211.11.130");
-		request.addHeader("X-Secure", "on");
+        request.setRemoteAddr("192.168.0.10");
+        request.setSecure(false);
+        request.setScheme("http");
+        request.addHeader("X-Forwarded-For", "140.211.11.130");
+        request.addHeader("X-Secure", "on");
 
-		response = new MockHttpServletResponse();
+        response = new MockHttpServletResponse();
 
-		// TEST
-		xforwardedFilter.doFilter(request, response, filterChain);
+        // TEST
+        xforwardedFilter.doFilter(request, response, filterChain);
 
-		// VERIFY
-		actualSecure = filterChain.getRequest().isSecure();
-		assertEquals("request must be secured as header X-Secure='on'", true, actualSecure);
+        // VERIFY
+        actualSecure = filterChain.getRequest().isSecure();
+        assertEquals("request must be secured as header X-Secure='on'", true, actualSecure);
 
-		actualScheme = filterChain.getRequest().getScheme();
-		assertEquals("scheme must be https as header X-Secure='on'", "https", actualScheme);
+        actualScheme = filterChain.getRequest().getScheme();
+        assertEquals("scheme must be https as header X-Secure='on'", "https", actualScheme);
 
-		actualServerPort = filterChain.getRequest().getServerPort();
-		assertEquals("wrong http server port", 443, actualServerPort);
+        actualServerPort = filterChain.getRequest().getServerPort();
+        assertEquals("wrong http server port", 443, actualServerPort);
 
-		actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
-		assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
+        actualRemoteAddr = ((HttpServletRequest) filterChain.getRequest()).getRemoteAddr();
+        assertEquals("remoteAddr", "140.211.11.130", actualRemoteAddr);
 
-		actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
-		assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
+        actualRemoteHost = ((HttpServletRequest) filterChain.getRequest()).getRemoteHost();
+        assertEquals("remoteHost", "140.211.11.130", actualRemoteHost);
 
-		((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
-		assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
-	}
+        ((HttpServletResponse) filterChain.getResponse()).sendRedirect("http://absolute/URL");
+        assertEquals("redirectedUrl", "http://absolute/URL", response.getRedirectedUrl());
+    }
 
     @Test
     public void testInvokeAllowedRemoteAddrWithNullRemoteIpHeader() throws Exception {

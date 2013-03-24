@@ -885,7 +885,7 @@ public class XForwardedFilter implements Filter {
                 }
             }
             
-			switchSsl(request, xRequest);
+            switchSsl(request, xRequest);
             
             if (logger.isDebugEnabled()) {
                 logger.debug("Incoming request '" + request.getRequestURI()
@@ -912,28 +912,36 @@ public class XForwardedFilter implements Filter {
         
 	}
 
-	private void switchSsl(final HttpServletRequest request, final XForwardedRequest xRequest) {
-		xRequest.setSecure(false);
-		xRequest.setScheme("http");
-		xRequest.setServerPort(httpServerPort);
-		if (protocolHeader != null) {
-			final List<String> headers = Arrays.asList(protocolHeader.split(SPLIT));
-			int idx = 0;
-			final List<String> values = Arrays.asList(protocolHeaderHttpsValue.split(SPLIT));
-			for (String header : headers) {
-				final String value = request.getHeader(header);
-				final String machingValue = values.get(idx);
-				if (machingValue != null && machingValue.equalsIgnoreCase(value)) {
-					xRequest.setSecure(true);
-					xRequest.setScheme("https");
-					xRequest.setServerPort(httpsServerPort);
-					break;
-				}
-				idx++;
-			}
-			
-		}
-	}
+    /**
+     * Process the switch process based on
+     * <code>protocolHeader</code> and
+     * <code>protocolHeaderHttpsValue</code>.
+     *
+     * @param request orginal request
+     * @param xRequest newly created request
+     */
+    private void switchSsl(final HttpServletRequest request, final XForwardedRequest xRequest) {
+        xRequest.setSecure(false);
+        xRequest.setScheme("http");
+        xRequest.setServerPort(httpServerPort);
+        if (protocolHeader != null) {
+            final List<String> headers = Arrays.asList(protocolHeader.split(SPLIT));
+            int idx = 0;
+            final List<String> values = Arrays.asList(protocolHeaderHttpsValue.split(SPLIT));
+            for (String header : headers) {
+                final String value = request.getHeader(header);
+                final String machingValue = values.get(idx);
+                if (machingValue != null && machingValue.equalsIgnoreCase(value)) {
+                    xRequest.setSecure(true);
+                    xRequest.setScheme("https");
+                    xRequest.setServerPort(httpsServerPort);
+                    break;
+                }
+                idx++;
+            }
+
+        }
+    }
     
     /**
      * Wrap the incoming <code>request</code> in a {@link XForwardedRequest} if the http header <code>x-forwareded-for</code> is not empty.
