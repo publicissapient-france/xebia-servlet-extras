@@ -128,17 +128,27 @@ import org.slf4j.LoggerFactory;
  * </tr>
  * <tr>
  * <td>protocolHeader</td>
- * <td>Name of the http header read by this servlet filter that holds the flag that this request</td>
+ * <td>Name of the http header(s) read by this servlet filter that holds the flag that this request</td>
  * <td>N/A</td>
- * <td>Compliant http header name like <code>X-Forwarded-Proto</code>, <code>X-Forwarded-Ssl</code> or <code>Front-End-Https</code></td>
- * <td><code>null</code></td>
+ * <td>Compliant http header name(s) like
+ * <code>X-Forwarded-Proto</code>,
+ * <code>X-Forwarded-Ssl</code>,
+ * <code>Front-End-Https</code> or
+ * <code>X-Secure</code>. Pass multiple values by spliting them with
+ * <code>, ; |</code> signs</td>
+ * <td><code>X-Forwarded-Proto,X-Forwarded-Ssl,Front-End-Https,X-Secure</code></td>
  * </tr>
  * <tr>
  * <td>protocolHeaderHttpsValue</td>
- * <td>Value of the <code>protocolHeader</code> to indicate that it is an Https request</td>
+ * <td>Value(s) of the
+ * <code>protocolHeader</code> to indicate that it is an Https request</td>
  * <td>N/A</td>
- * <td>String like <code>https</code> or <code>ON</code></td>
- * <td><code>https</code></td>
+ * <td>String like
+ * <code>https</code> or
+ * <code>ON</code>. Pass multiple values by spliting them with
+ * <code>, ; |</code> signs. Count must match count of
+ * <code>protocolHeader</code></td>
+ * <td><code>https,on,on,on</code></td>
  * </tr>
  * <tr>
  * <tr>
@@ -801,9 +811,11 @@ public class XForwardedFilter implements Filter {
     /**
      * @see #setProtocolHeader(String)
      */
-    private String protocolHeader = null;
+	private String protocolHeader = "X-Forwarded-Proto,X-Forwarded-Ssl,Front-End-Https,X-Secure";
     
-    private String protocolHeaderHttpsValue = "https";
+	private String protocolHeaderHttpsValue = "https,on,on,on";
+
+	private static final String SPLIT = "[,;|]";
     
     /**
      * @see #setProxiesHeader(String)
@@ -873,21 +885,7 @@ public class XForwardedFilter implements Filter {
                 }
             }
             
-            if (protocolHeader != null) {
-                String protocolHeaderValue = request.getHeader(protocolHeader);
-                if (protocolHeaderValue == null) {
-                    // don't modify the secure,scheme and serverPort attributes of the request
-                } else if (protocolHeaderHttpsValue.equalsIgnoreCase(protocolHeaderValue)) {
-                    xRequest.setSecure(true);
-                    xRequest.setScheme("https");
-                    xRequest.setServerPort(httpsServerPort);
-                } else {
-                    xRequest.setSecure(false);
-                    xRequest.setScheme("http");
-                    xRequest.setServerPort(httpServerPort);
-                }
-
-            }
+			switchSsl(request, xRequest);
             
             if (logger.isDebugEnabled()) {
                 logger.debug("Incoming request '" + request.getRequestURI()
@@ -912,7 +910,30 @@ public class XForwardedFilter implements Filter {
             chain.doFilter(request, response);
         }
         
-    }
+	}
+
+	private void switchSsl(final HttpServletRequest request, final XForwardedRequest xRequest) {
+		xRequest.setSecure(false);
+		xRequest.setScheme("http");
+		xRequest.setServerPort(httpServerPort);
+		if (protocolHeader != null) {
+			final List<String> headers = Arrays.asList(protocolHeader.split(SPLIT));
+			int idx = 0;
+			final List<String> values = Arrays.asList(protocolHeaderHttpsValue.split(SPLIT));
+			for (String header : headers) {
+				final String value = request.getHeader(header);
+				final String machingValue = values.get(idx);
+				if (machingValue != null && machingValue.equalsIgnoreCase(value)) {
+					xRequest.setSecure(true);
+					xRequest.setScheme("https");
+					xRequest.setServerPort(httpsServerPort);
+					break;
+				}
+				idx++;
+			}
+			
+		}
+	}
     
     /**
      * Wrap the incoming <code>request</code> in a {@link XForwardedRequest} if the http header <code>x-forwareded-for</code> is not empty.
