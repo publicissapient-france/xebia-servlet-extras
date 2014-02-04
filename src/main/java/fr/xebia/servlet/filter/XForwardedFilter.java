@@ -625,6 +625,9 @@ public class XForwardedFilter implements Filter {
          */
         protected String toAbsolute(String location) {
             String url = location;
+            if (url == null) {
+                url = "";
+            }
             boolean leadingSlash = url.startsWith("/");
             StringBuilder urlBuilder = new StringBuilder();
             if (leadingSlash || !hasScheme(url)) {

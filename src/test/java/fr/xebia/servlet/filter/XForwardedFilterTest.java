@@ -693,6 +693,7 @@ public class XForwardedFilterTest {
             response.toAbsolute(request.getContextPath() + "/relativeURI"));
         assertEquals("absolute uri", "https://server/othercontext/uri",
             response.toAbsolute("https://server/othercontext/uri"));
+        assertEquals("null uri", "http://localhost/context/dir/", response.toAbsolute(null));
     }
     
 }
